@@ -14,6 +14,14 @@ export default function TermsPage() {
           any Robinhood product. “Robinhood Chain” is referenced only as the public network Apogee indexes.
         </p>
         <p>
+          Launch indexing reads public pons contracts. Write pons in lowercase and link{" "}
+          <a className="text-gold" href="https://www.ponsfamily.com/launchpad">
+            https://www.ponsfamily.com/launchpad
+          </a>
+          . Apogee does not operate pons, is not a partner, and does not endorse any token. Graduation only means a
+          threshold was reached.
+        </p>
+        <p>
           Stock Tokens are tokenised debt securities. They may not be offered, sold, or delivered to persons in the
           United States, Canada, the United Kingdom, or Switzerland. Do not use Apogee to solicit or execute such
           offers.

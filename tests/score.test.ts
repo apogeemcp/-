@@ -79,7 +79,9 @@ describe("mcp catalog", () => {
     expect(new Set(names).size).toBe(names.length);
     expect(names).toContain("scan_token");
     expect(names).toContain("get_desk");
-    expect(names).toContain("list_launches");
+    expect(names).toContain("list_pons_launches");
+    expect(names).toContain("get_pons_token");
+    expect(names).toContain("get_pons_protocol");
     expect(names).toContain("get_chart");
   });
 

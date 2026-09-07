@@ -17,7 +17,15 @@ export default function UsagePage() {
         <p>Never paste a private key into chat. Apogee will not sign or broadcast transactions.</p>
         <p>
           Example prompts: “Scan NVDA on Robinhood Chain and tell me if this contract is the canonical Stock Token.”
-          “What’s trending on RH chain in the last hour?” “Chart ROBIN/USDG 5m candles.” “Desk snapshot.”
+          “What’s trending on RH chain in the last hour?” “List pons launches and show graduation progress.” “Desk
+          snapshot.” “Is 0x39dBED… a pons v1 token, and has it graduated?”
+        </p>
+        <p>
+          Launch data is read on-chain from pons factories (write pons lowercase;{" "}
+          <a className="text-gold" href="https://www.ponsfamily.com/launchpad">
+            app
+          </a>
+          ). Apogee is not operated by pons. Graduation is not a quality signal.
         </p>
         <p>{TOOLS.length} tools are listed on the docs page. REST mirror: POST /api/v1 with {`{ "tool": "scan_token", "arguments": { "query": "NVDA" } }`} or GET /api/v1/scan_token?query=NVDA.</p>
       </div>

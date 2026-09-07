@@ -2,7 +2,7 @@ import { TOOLS, MCP_INSTRUCTIONS } from "./tools";
 import { toolImpl, type ToolName } from "./intel";
 
 export const MCP_PROTOCOL = "2025-03-26";
-export const SERVER_INFO = { name: "apogee", version: "1.0.0" };
+export const SERVER_INFO = { name: "apogee", version: "1.1.0" };
 
 type RpcId = string | number | null;
 type RpcReq = { jsonrpc?: string; id?: RpcId; method?: string; params?: unknown };

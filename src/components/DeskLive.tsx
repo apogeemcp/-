@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LaunchGrid, type PonsLaunch } from "./LaunchPad";
 
 type Desk = {
   chain?: { block?: number; tvlUsd?: number; stockTokens?: number };
   trending?: Array<{ name?: string; priceUsd?: number | null; change1h?: number | null; address?: string }>;
-  launches?: Array<{ name?: string; createdAt?: string; priceUsd?: number | null }>;
+  launches?: PonsLaunch[];
   stocks?: Array<{
     symbol: string;
     mid: number | null;
@@ -78,15 +79,13 @@ export function DeskLive() {
         </ul>
       </article>
       <article className="glass rounded-3xl p-5 lg:col-span-3">
-        <p className="text-[10px] uppercase tracking-[0.24em] text-gold">Launches</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {(desk.launches || []).slice(0, 6).map((l) => (
-            <div key={String(l.name) + l.createdAt} className="rounded-xl border border-white/5 px-3 py-2">
-              <p className="truncate text-sm text-ivory">{l.name}</p>
-              <p className="font-mono text-[11px] text-ivory/45">{l.createdAt}</p>
-            </div>
-          ))}
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-gold">pons launches</p>
+          <a href="/launches" className="text-[11px] uppercase tracking-[0.16em] text-ivory/50 hover:text-gold">
+            All launches
+          </a>
         </div>
+        <LaunchGrid launches={(desk.launches || []).slice(0, 6)} compact />
       </article>
     </div>
   );

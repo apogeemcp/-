@@ -1,6 +1,7 @@
 import { CHAIN, ENDPOINTS, TOKENS, isAddress, dexTokenUrl, explorerToken, explorerAddress } from "./chain";
 import { fetchJson, erc20Meta, erc20Balance, nativeBalance, latestBlock, gasPriceWei, getTransaction, formatUnits } from "./rpc";
 import { computeApogeeScore, momentumScore } from "./score";
+import { getPonsGraduation, getPonsProtocol, getPonsToken, listPonsLaunches, PONS } from "./pons";
 
 export type DsPair = {
   chainId?: string;
@@ -240,8 +241,9 @@ function tokenFromPair(p: DsPair) {
 
 export async function searchToken(query: string) {
   const q = query.trim();
-  if (!q) return { query: q, stocks: [], pairs: [], note: "empty query" };
-  const [assets, pairs] = await Promise.all([loadStockAssets(), searchDex(q)]);
+  if (!q) return { query: q, stocks: [], pairs: [], pons: null, note: "empty query" };
+  const ponsPromise = isAddress(q) ? getPonsToken(q).catch(() => null) : Promise.resolve(null);
+  const [assets, pairs, pons] = await Promise.all([loadStockAssets(), searchDex(q), ponsPromise]);
   const qLower = q.toLowerCase();
   const stocks = assets.filter((a) => {
     if (isAddress(q) && a.contractAddress.toLowerCase() === q.toLowerCase()) return true;
@@ -256,6 +258,7 @@ export async function searchToken(query: string) {
     chain: CHAIN.slug,
     stocks: stocks.slice(0, 12),
     pairs: pairs.slice(0, 20).map(tokenFromPair),
+    pons: pons && "ok" in pons && pons.ok ? pons : null,
   };
 }
 
@@ -272,6 +275,30 @@ export async function scanToken(query: string) {
   }
   const best = pickBestPair(pairs);
   if (!best?.baseToken?.address) {
+    if (isAddress(q)) {
+      const ponsOnly = await getPonsToken(q).catch(() => null);
+      if (ponsOnly && "ok" in ponsOnly && ponsOnly.ok) {
+        return {
+          ok: true,
+          query: q,
+          token: {
+            address: ponsOnly.token,
+            name: ponsOnly.meta?.name,
+            symbol: ponsOnly.meta?.symbol,
+            image: ponsOnly.meta?.logo || null,
+            priceUsd: ponsOnly.priceUsd ?? null,
+            mcap: ponsOnly.marketCapUsd ?? null,
+            liquidity: null,
+            canonicalStock: false,
+            pons: true,
+          },
+          pons: ponsOnly,
+          score: { total: 35, verdict: "PONS LAUNCH — resolve by address, graduation is not quality" },
+          flags: { tickerCollision: false, canonicalStock: false, unverifiedLookalike: false },
+          verdict: "PONS LAUNCH — curve or locked pool; always verify the contract",
+        };
+      }
+    }
     return { ok: false, error: `No Robinhood Chain market found for "${q}".` };
   }
   const address = best.baseToken.address;
@@ -306,6 +333,8 @@ export async function scanToken(query: string) {
     premiumBps,
   });
   const mom = momentumScore(best.priceChange?.h24 ?? null, buys, sells, liq > 0 && vol ? vol / liq : null);
+  const pons = await getPonsToken(address).catch(() => null);
+  const ponsHit = pons && "ok" in pons && pons.ok ? pons : null;
   return {
     ok: true,
     query: q,
@@ -335,6 +364,7 @@ export async function scanToken(query: string) {
       dexPremiumBps: premiumBps,
       collisions: [...uniqueAddrs].filter((a) => a !== address.toLowerCase()).slice(0, 8),
     },
+    pons: ponsHit,
     score,
     flags,
     verdict: score.verdict,
@@ -358,9 +388,10 @@ export async function getToken(addressOrSymbol: string) {
 }
 
 export async function getDesk() {
-  const [trend, launches, assets, tvl, block, boosted] = await Promise.all([
+  const [trend, geckoLaunches, ponsLaunches, assets, tvl, block, boosted] = await Promise.all([
     trendingPools("1h"),
     newPools(),
+    listPonsLaunches({ limit: 12, lookback: 8_000 }).catch(() => ({ launches: [] as unknown[] })),
     loadStockAssets(),
     llamaTvl(),
     latestBlock().catch(() => ({ number: 0, timestamp: null })),
@@ -405,8 +436,13 @@ export async function getDesk() {
       stockTokens: assets.length,
     },
     trending: trend.slice(0, 12),
-    launches: launches.slice(0, 12),
+    launches: ("launches" in ponsLaunches ? ponsLaunches.launches : []) as unknown[],
+    geckoLaunches: geckoLaunches.slice(0, 12),
     stocks: quotes,
+    pons: {
+      app: PONS.app,
+      attribution: PONS.attribution,
+    },
     boosted: boosted.slice(0, 10),
   };
 }
@@ -576,7 +612,27 @@ export const toolImpl = {
     getChart(String(args.query || args.pool || args.address || ""), String(args.timeframe || "minute"), Number(args.aggregate || 5)),
   get_desk: () => getDesk(),
   list_trending: (args: Record<string, unknown>) => trendingPools(String(args.duration || "1h")),
-  list_launches: () => newPools(),
+  list_launches: async (args: Record<string, unknown>) => {
+    const [pons, gecko] = await Promise.all([
+      listPonsLaunches({
+        limit: Number(args.limit || 24),
+        lookback: args.lookback ? Number(args.lookback) : 8_000,
+        generation: args.generation ? String(args.generation) : "all",
+      }).catch((error) => ({ ok: false, error: String(error), launches: [] })),
+      newPools().catch(() => []),
+    ]);
+    return { ...pons, gecko };
+  },
+  list_pons_launches: (args: Record<string, unknown>) =>
+    listPonsLaunches({
+      limit: Number(args.limit || 24),
+      lookback: args.lookback ? Number(args.lookback) : 8_000,
+      generation: args.generation ? String(args.generation) : "all",
+    }),
+  get_pons_token: (args: Record<string, unknown>) => getPonsToken(String(args.address || args.token || args.query || "")),
+  get_pons_graduation: (args: Record<string, unknown>) =>
+    getPonsGraduation(String(args.address || args.token || args.query || "")),
+  get_pons_protocol: () => getPonsProtocol(),
   list_top_pools: () => topPools(),
   list_stock_tokens: async (args: Record<string, unknown>) => {
     const all = await loadStockAssets();
@@ -615,7 +671,14 @@ export const toolImpl = {
   get_corporate_actions: (args: Record<string, unknown>) => corporateActions(Number(args.limit || 25)),
   apogee_status: async () => {
     const stats = await getChainStats();
-    return { ok: true, product: "Apogee MCP", version: "1.0.0", auth: "none", ...stats };
+    return {
+      ok: true,
+      product: "Apogee MCP",
+      version: "1.1.0",
+      auth: "none",
+      pons: { app: PONS.app, docs: PONS.docs },
+      ...stats,
+    };
   },
 };
 

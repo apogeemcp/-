@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="apogee-ring" x1="4" y1="12" x2="60" y2="52">
+      <stop offset="0%" stop-color="#d4af37"/>
+      <stop offset="45%" stop-color="#ff6b1a"/>
+      <stop offset="100%" stop-color="#ff3b1a"/>
+    </linearGradient>
+    <radialGradient id="apogee-body" cx="38%" cy="32%" r="70%">
+      <stop offset="0%" stop-color="#3a3428"/>
+      <stop offset="45%" stop-color="#12100c"/>
+      <stop offset="100%" stop-color="#050505"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="32" cy="32" rx="28" ry="8.5" transform="rotate(-26 32 32)" stroke="url(#apogee-ring)" stroke-width="2.4" opacity="0.95"/>
+  <ellipse cx="32" cy="32" rx="24" ry="6.6" transform="rotate(-26 32 32)" stroke="#f0d78c" stroke-width="1" opacity="0.55"/>
+  <circle cx="32" cy="32" r="13.5" fill="url(#apogee-body)" stroke="#d4af37" stroke-width="1.15"/>
+  <path d="M22 27.5c4-2.4 9-3.4 14-2.2" stroke="#f6f1e4" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="24.5" cy="25.5" r="1.15" fill="#fff6d6"/>
+</svg>

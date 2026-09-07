@@ -60,7 +60,54 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "list_launches",
-    description: "Newest Robinhood Chain pools / token launches.",
+    description:
+      "Newest Robinhood Chain launches. Prefers on-chain pons v2/v1 TokenLaunched events (bonding-curve + Uniswap) and also returns GeckoTerminal new pools.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Max pons launches to enrich (default 24)" },
+        lookback: { type: "number", description: "Block lookback for factory logs (default 8000)" },
+        generation: { type: "string", enum: ["all", "v1", "v2"], default: "all" },
+      },
+    },
+  },
+  {
+    name: "list_pons_launches",
+    description:
+      "Index pons launches from factory TokenLaunched logs on Robinhood Chain. v2 is the live bonding-curve factory; v1 is Uniswap V3 vs WETH. Write pons lowercase.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: { type: "number" },
+        lookback: { type: "number" },
+        generation: { type: "string", enum: ["all", "v1", "v2"] },
+      },
+    },
+  },
+  {
+    name: "get_pons_token",
+    description:
+      "Full on-chain pons launch record: metadata, socials, logo, factory tuple, curve reserves or V3 pool price, graduation progress, fee split. Resolve by token address.",
+    inputSchema: {
+      type: "object",
+      properties: { address: { type: "string", description: "Launch token 0x address" } },
+      required: ["address"],
+    },
+  },
+  {
+    name: "get_pons_graduation",
+    description:
+      "Graduation progress for a pons token. v1: locked WETH principal vs threshold (default 4.2 ETH). v2: realQuoteReserve vs threshold / phase. Graduation is not a quality signal.",
+    inputSchema: {
+      type: "object",
+      properties: { address: { type: "string" } },
+      required: ["address"],
+    },
+  },
+  {
+    name: "get_pons_protocol",
+    description:
+      "pons network facts, V1/V2 contracts, events, fee splits, reference PONS token, and attribution rules from docs.ponsfamily.com.",
     inputSchema: { type: "object", properties: {} },
   },
   {
@@ -183,4 +230,9 @@ Rules:
 - Never ask for a seed phrase or private key. All tools are read-only.
 - Do not claim a swap executed. get_swap_quote is indicative only.
 - Stock Tokens may not be offered to US/Canada/UK/Switzerland persons.
-- Prefer scan_token before size, get_desk for a market snapshot, list_launches for new pools.`;
+- Prefer scan_token before size, get_desk for a market snapshot, list_launches / list_pons_launches for new tokens.
+pons (write the name in lowercase; link https://www.ponsfamily.com/launchpad):
+- Apogee indexes pons on-chain. It is not operated by pons and does not imply partnership.
+- V1: Uniswap V3 vs WETH only, 1% fee, 1e9 supply, no bonding curve, no migration. Graduation = paired WETH vs threshold (default 4.2 ETH). Trading stays in the same pool.
+- V2 (live factory 0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e): bonding curve then Uniswap V4. pairToken 0x0 = native ETH. phase 0 = curve, 2 = PoolCreated. Names/symbols can be copied — always check the token address.
+- Graduation is not a quality signal. Use get_pons_token / get_pons_graduation for a specific address.`;

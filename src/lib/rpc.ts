@@ -28,16 +28,28 @@ export async function fetchJson<T>(
   }
 }
 
-export async function rpc<T = unknown>(method: string, params: unknown[] = []): Promise<T> {
+export async function rpc<T = unknown>(method: string, params: unknown[] = [], attempts = 4): Promise<T> {
   const url = process.env.APOGEE_RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-  });
-  const body = (await res.json()) as { result?: T; error?: { message?: string } };
-  if (body.error) throw new Error(body.error.message || "rpc error");
-  return body.result as T;
+  let last: Error | null = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      });
+      if (res.status === 429) throw new Error("Too Many Requests");
+      const body = (await res.json()) as { result?: T; error?: { message?: string } };
+      if (body.error) throw new Error(body.error.message || "rpc error");
+      return body.result as T;
+    } catch (error) {
+      last = error instanceof Error ? error : new Error(String(error));
+      const retryable = /429|Too Many|fetch|network|timeout|rpc error/i.test(last.message);
+      if (!retryable || i === attempts - 1) throw last;
+      await new Promise((r) => setTimeout(r, 350 * 2 ** i));
+    }
+  }
+  throw last || new Error("rpc error");
 }
 
 export function padAddress(address: string): string {

@@ -260,9 +260,11 @@ export async function runTool(name: string, args: Record<string, unknown>): Prom
       };
     }
     case "get_desk": {
-      const [trend, launches, assets, llama, blockHex] = await Promise.all([
+      const { ponsLaunches } = await import("./pons.ts");
+      const [trend, geckoLaunches, pons, assets, llama, blockHex] = await Promise.all([
         fetchJson<any>(`${GECKO}/networks/${SLUG}/trending_pools?duration=1h`, { headers: { accept: "application/json;version=20230302" } }),
         fetchJson<any>(`${GECKO}/networks/${SLUG}/new_pools?page=1`, { headers: { accept: "application/json;version=20230302" } }),
+        ponsLaunches(12, 8000).catch(() => ({ launches: [] })),
         loadAssets(),
         fetchJson<any[]>(`${LLAMA}/v2/chains`),
         rpc<string>("eth_blockNumber").catch(() => "0x0"),
@@ -290,7 +292,8 @@ export async function runTool(name: string, args: Record<string, unknown>): Prom
       return {
         chain: { id: CHAIN_ID, name: "Robinhood Chain", block: Number(BigInt(blockHex || "0x0")), tvlUsd: tvl, stockTokens: assets.length },
         trending: gecko(trend?.data).slice(0, 12),
-        launches: gecko(launches?.data).slice(0, 12),
+        launches: (pons as { launches?: unknown[] }).launches || [],
+        geckoLaunches: gecko(geckoLaunches?.data).slice(0, 12),
         stocks,
       };
     }
@@ -300,8 +303,33 @@ export async function runTool(name: string, args: Record<string, unknown>): Prom
       return gecko(data?.data);
     }
     case "list_launches": {
-      const data = await fetchJson<any>(`${GECKO}/networks/${SLUG}/new_pools?page=1`, { headers: { accept: "application/json;version=20230302" } });
-      return gecko(data?.data);
+      const [pons, data] = await Promise.all([
+        (await import("./pons.ts")).ponsLaunches(Number(args.limit || 24), Number(args.lookback || 8000)).catch((e) => ({
+          ok: false,
+          error: String(e),
+          launches: [],
+        })),
+        fetchJson<any>(`${GECKO}/networks/${SLUG}/new_pools?page=1`, { headers: { accept: "application/json;version=20230302" } }),
+      ]);
+      return { ...pons, gecko: gecko(data?.data) };
+    }
+    case "list_pons_launches": {
+      const { ponsLaunches } = await import("./pons.ts");
+      return ponsLaunches(Number(args.limit || 24), Number(args.lookback || 8000));
+    }
+    case "get_pons_token": {
+      const { ponsToken } = await import("./pons.ts");
+      return ponsToken(String(args.address || args.token || args.query || ""));
+    }
+    case "get_pons_graduation": {
+      const { ponsToken } = await import("./pons.ts");
+      const t = await ponsToken(String(args.address || args.token || args.query || ""));
+      if (!t || (t as any).ok === false) return t;
+      return { ok: true, token: (t as any).token, generation: (t as any).generation, graduation: (t as any).graduation, attribution: (t as any).attribution };
+    }
+    case "get_pons_protocol": {
+      const { ponsProtocol } = await import("./pons.ts");
+      return ponsProtocol();
     }
     case "list_top_pools": {
       const data = await fetchJson<any>(`${GECKO}/networks/${SLUG}/pools?page=1`, { headers: { accept: "application/json;version=20230302" } });
@@ -412,7 +440,7 @@ export async function runTool(name: string, args: Record<string, unknown>): Prom
       return (data?.corpActions || []).slice(0, Number(args.limit || 25));
     }
     case "apogee_status":
-      return { ok: true, product: "Apogee MCP", version: "1.0.0", auth: "none", chainId: CHAIN_ID, slug: SLUG };
+      return { ok: true, product: "Apogee MCP", version: "1.1.0", auth: "none", chainId: CHAIN_ID, slug: SLUG };
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -451,7 +479,11 @@ export const TOOLS = [
   ["get_chart", "OHLCV candles for the deepest pool."],
   ["get_desk", "Chain stats, trending, launches, featured stock quotes."],
   ["list_trending", "Trending pools."],
-  ["list_launches", "Newest pools."],
+  ["list_launches", "Newest pons launches plus GeckoTerminal new pools."],
+  ["list_pons_launches", "Index pons launches from factory TokenLaunched logs."],
+  ["get_pons_token", "Full on-chain pons launch record."],
+  ["get_pons_graduation", "Graduation progress for a pons token."],
+  ["get_pons_protocol", "pons network facts and contracts."],
   ["list_top_pools", "Top pools."],
   ["list_stock_tokens", "Canonical Stock Token registry."],
   ["get_stock_quote", "RHJ bid/ask vs DEX premium."],

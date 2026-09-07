@@ -9,7 +9,7 @@ export default function PrivacyPage() {
         "Apogee is a public, no-login Model Context Protocol server and website for Robinhood Chain market data.",
         "We do not create user accounts. We do not ask for names, emails, passwords, seed phrases, or private keys.",
         "When you or an AI client call Apogee tools, we may log the tool name, query string (ticker or public address), timestamp, and coarse result metadata so we can keep the APIs reliable. We do not intend to log IP addresses beyond what our hosting providers retain in ordinary access logs.",
-        "Data sources include public RPC nodes, DexScreener, GeckoTerminal, DefiLlama, and Robinhood's public RHJ Stock Token APIs. Those providers have their own policies.",
+        "Data sources include public RPC nodes, DexScreener, GeckoTerminal, DefiLlama, Robinhood's public RHJ Stock Token APIs, and on-chain pons factory/pool reads. Those providers have their own policies. Apogee is not operated by pons.",
         "If we store scan history in Supabase, it is for anonymous product telemetry and caching — not advertising profiles.",
         "Cookies: the marketing site does not require cookies for the MCP to work. Optional analytics, if added later, will be disclosed here.",
         "Contact: open an issue on the Apogee GitHub repository.",

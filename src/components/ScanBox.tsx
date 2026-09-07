@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type Scan = {
   ok?: boolean;
@@ -15,30 +16,53 @@ type Scan = {
     momentumLabel?: string;
     canonicalStock?: boolean;
     dexPremiumBps?: number | null;
+    image?: string | null;
   };
   score?: { total?: number };
+  pons?: {
+    generation?: string;
+    venue?: string;
+    graduation?: { progress?: number; graduated?: boolean; phase?: string; note?: string };
+    meta?: { logo?: string | null; description?: string | null };
+  };
 };
 
 export function ScanBox() {
+  const params = useSearchParams();
   const [q, setQ] = useState("NVDA");
   const [busy, setBusy] = useState(false);
   const [out, setOut] = useState<Scan | null>(null);
 
-  async function run(e: React.FormEvent) {
-    e.preventDefault();
+  async function runQuery(query: string) {
     setBusy(true);
     setOut(null);
     try {
       const r = await fetch("/api/v1/scan_token", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ query: q }),
+        body: JSON.stringify({ query }),
       });
       setOut(await r.json().then((j) => (j.result || j) as Scan));
     } finally {
       setBusy(false);
     }
   }
+
+  useEffect(() => {
+    const scan = params.get("scan");
+    if (scan) {
+      setQ(scan);
+      void runQuery(scan);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
+
+  async function run(e: React.FormEvent) {
+    e.preventDefault();
+    await runQuery(q);
+  }
+
+  const progress = out?.pons?.graduation?.progress;
 
   return (
     <section className="glass rounded-3xl p-6">
@@ -65,6 +89,25 @@ export function ScanBox() {
           <Stat k="Verdict" v={out.verdict || "—"} />
           <Stat k="Price" v={out.token.priceUsd != null ? `$${Number(out.token.priceUsd).toLocaleString(undefined, { maximumFractionDigits: 6 })}` : "—"} />
           <Stat k="Liq" v={out.token.liquidity != null ? `$${Math.round(out.token.liquidity).toLocaleString()}` : "—"} />
+          {out.pons && (
+            <div className="sm:col-span-4 rounded-2xl border border-gold/20 bg-black/30 p-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-gold">
+                pons {out.pons.generation} · {out.pons.venue}
+              </p>
+              <p className="mt-1 text-sm text-ivory/70">
+                {out.pons.graduation?.graduated ? "Graduated" : "In flight"} ·{" "}
+                {Math.round((progress || 0) * 100)}% to threshold
+                {out.pons.graduation?.phase ? ` · ${out.pons.graduation.phase}` : ""}
+              </p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full bg-gradient-to-r from-gold via-ember to-flare"
+                  style={{ width: `${Math.round((progress || 0) * 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-[11px] text-ivory/40">{out.pons.graduation?.note}</p>
+            </div>
+          )}
           <p className="sm:col-span-4 font-mono text-[11px] text-ivory/50">
             {out.token.symbol} · {out.token.address} · {out.token.canonicalStock ? "canonical stock" : "market token"} ·{" "}
             {out.token.momentumLabel}
