@@ -12,3 +12,5 @@ coverage
 .turbo
 supabase/.temp
 .supabase
+tsconfig.tsbuildinfo
+
