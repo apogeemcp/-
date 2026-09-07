@@ -1,0 +1,7 @@
+project_id = "paxtohwiycuhwmlziwrr"
+
+[functions.apogee-mcp]
+verify_jwt = false
+
+[functions.apogee-api]
+verify_jwt = false

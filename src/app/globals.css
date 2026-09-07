@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --void: #050505;
+  --gold: #d4af37;
+  --ember: #ff6b1a;
+  --flare: #ff3b1a;
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--void);
+  color: #f6f1e4;
+  min-height: 100%;
+}
+
+body {
+  background-image:
+    radial-gradient(1200px 600px at 80% -10%, rgba(212, 175, 55, 0.12), transparent 55%),
+    radial-gradient(900px 500px at -10% 90%, rgba(255, 59, 26, 0.1), transparent 50%),
+    radial-gradient(700px 400px at 50% 110%, rgba(255, 107, 26, 0.08), transparent 45%);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d4af37 #111;
+}
+
+::selection {
+  background: #d4af37;
+  color: #050505;
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(18, 16, 14, 0.72), rgba(8, 7, 7, 0.86));
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(18px);
+}
+
+.hairline {
+  background: linear-gradient(90deg, transparent, #d4af37, #ff6b1a, #ff3b1a, transparent);
+  height: 1px;
+}
+
+.apogee-title {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
