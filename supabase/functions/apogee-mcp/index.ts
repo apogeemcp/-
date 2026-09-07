@@ -1,7 +1,5 @@
 import { cors, json, runTool, TOOLS, logUsage } from "../_shared/apogee.ts";
 
-import { cors, json, runTool, TOOLS, logUsage } from "../_shared/apogee.ts";
-
 const INSTRUCTIONS = `You are connected to Apogee, the Robinhood Chain intel MCP (Search / Chart / Desk / Launch). Chain 4663, DexScreener slug robinhood. Resolve by contract. Read-only. Never ask for keys. Write pons lowercase; Apogee is not operated by pons. Graduation is not a quality signal.`;
 
 function ok(id: unknown, result: unknown) {

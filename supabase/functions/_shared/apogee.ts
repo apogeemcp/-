@@ -1,3 +1,5 @@
+import { ponsLaunches, ponsToken, ponsProtocol } from "./pons.ts";
+
 export const CHAIN_ID = 4663;
 export const SLUG = "robinhood";
 export const RPC = Deno.env.get("APOGEE_RPC_URL") || "https://rpc.mainnet.chain.robinhood.com";
@@ -260,7 +262,6 @@ export async function runTool(name: string, args: Record<string, unknown>): Prom
       };
     }
     case "get_desk": {
-      const { ponsLaunches } = await import("./pons.ts");
       const [trend, geckoLaunches, pons, assets, llama, blockHex] = await Promise.all([
         fetchJson<any>(`${GECKO}/networks/${SLUG}/trending_pools?duration=1h`, { headers: { accept: "application/json;version=20230302" } }),
         fetchJson<any>(`${GECKO}/networks/${SLUG}/new_pools?page=1`, { headers: { accept: "application/json;version=20230302" } }),
@@ -304,7 +305,7 @@ export async function runTool(name: string, args: Record<string, unknown>): Prom
     }
     case "list_launches": {
       const [pons, data] = await Promise.all([
-        (await import("./pons.ts")).ponsLaunches(Number(args.limit || 24), Number(args.lookback || 8000)).catch((e) => ({
+        ponsLaunches(Number(args.limit || 24), Number(args.lookback || 8000)).catch((e) => ({
           ok: false,
           error: String(e),
           launches: [],
@@ -314,21 +315,17 @@ export async function runTool(name: string, args: Record<string, unknown>): Prom
       return { ...pons, gecko: gecko(data?.data) };
     }
     case "list_pons_launches": {
-      const { ponsLaunches } = await import("./pons.ts");
       return ponsLaunches(Number(args.limit || 24), Number(args.lookback || 8000));
     }
     case "get_pons_token": {
-      const { ponsToken } = await import("./pons.ts");
       return ponsToken(String(args.address || args.token || args.query || ""));
     }
     case "get_pons_graduation": {
-      const { ponsToken } = await import("./pons.ts");
       const t = await ponsToken(String(args.address || args.token || args.query || ""));
       if (!t || (t as any).ok === false) return t;
       return { ok: true, token: (t as any).token, generation: (t as any).generation, graduation: (t as any).graduation, attribution: (t as any).attribution };
     }
     case "get_pons_protocol": {
-      const { ponsProtocol } = await import("./pons.ts");
       return ponsProtocol();
     }
     case "list_top_pools": {
