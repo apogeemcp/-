@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: `/brand/icon.png?v=${ASSET_V}`, type: "image/png" }],
     apple: [{ url: `/apple-touch-icon.png?v=${ASSET_V}` }],
-    shortcut: [`/icon.png?v=${ASSET_V}`],
+    shortcut: [`/brand/icon.png?v=${ASSET_V}`],
   },
   openGraph: {
     title: `${PRODUCT.name} MCP`,
