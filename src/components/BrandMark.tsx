@@ -1,16 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export function BrandMark({ size = 36, wordmark = true }: { size?: number; wordmark?: boolean }) {
+export function BrandMark({ size = 44, wordmark = true }: { size?: number; wordmark?: boolean }) {
   return (
     <Link href="/" className="group flex items-center gap-3">
-      <span className="relative shrink-0" style={{ width: size, height: size }}>
+      <span className="relative shrink-0 overflow-hidden rounded-full ring-1 ring-gold/50 group-hover:ring-ember" style={{ width: size, height: size }}>
         <Image
-          src="/brand/icon.png"
+          src="/brand/icon.png?v=3"
           alt="Apogee"
           width={size * 2}
           height={size * 2}
-          className="h-full w-full rounded-full object-cover ring-1 ring-gold/40 group-hover:ring-ember"
+          className="h-full w-full object-cover"
           priority
         />
       </span>

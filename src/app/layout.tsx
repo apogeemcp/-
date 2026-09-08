@@ -14,21 +14,21 @@ export const metadata: Metadata = {
     "Apogee is Robinhood Chain intel for agents. Search. Chart. Desk. Launch. Live pons indexing. No login — add the MCP to any AI app.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   icons: {
-    icon: [{ url: "/brand/icon.png", type: "image/png" }],
-    apple: [{ url: "/apple-touch-icon.png" }],
-    shortcut: ["/icon.png"],
+    icon: [{ url: "/brand/icon.png?v=3", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png?v=3" }],
+    shortcut: ["/icon.png?v=3"],
   },
   openGraph: {
     title: "Apogee MCP",
     description: "Robinhood Chain intel for agents. Search. Chart. Desk. Launch. Indexed from pons on-chain.",
     type: "website",
-    images: [{ url: "/og.png", width: 1376, height: 768, alt: "Apogee — Robinhood Chain intel for agents" }],
+    images: [{ url: "/og.png?v=3", width: 1376, height: 768, alt: "Apogee — Robinhood Chain intel for agents" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Apogee MCP",
     description: "Robinhood Chain intel for agents.",
-    images: ["/og.png"],
+    images: ["/og.png?v=3"],
   },
 };
 

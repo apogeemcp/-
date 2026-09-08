@@ -21,11 +21,11 @@ export default function DashboardPage() {
             </p>
           </div>
           <Image
-            src="/brand/logo.png"
+            src="/brand/logo.png?v=3"
             alt="Apogee"
-            width={280}
-            height={158}
-            className="hidden w-56 rounded-2xl ring-1 ring-gold/20 sm:block"
+            width={420}
+            height={236}
+            className="hidden w-72 object-contain sm:block"
           />
         </header>
         <ConnectPanel />

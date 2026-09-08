@@ -8,8 +8,8 @@ export default function LaunchesPage() {
       <SaturnBackdrop className="pointer-events-none fixed inset-0 opacity-40" />
       <div className="relative z-10 mx-auto max-w-6xl space-y-8 px-5 pb-24 pt-28">
         <header className="overflow-hidden rounded-3xl border border-gold/20">
-          <div className="relative h-44 sm:h-56">
-            <Image src="/brand/banner.png" alt="Apogee" fill className="object-cover" priority />
+          <div className="relative h-56 sm:h-80">
+            <Image src="/brand/banner.png?v=3" alt="Apogee" fill className="object-cover object-center" priority />
             <div className="absolute inset-0 bg-gradient-to-r from-void via-void/70 to-transparent" />
             <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8">
               <p className="text-[11px] uppercase tracking-[0.4em] text-gold">pons · on-chain · chain 4663</p>

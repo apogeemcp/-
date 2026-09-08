@@ -5,26 +5,21 @@ import { SaturnBackdrop } from "@/components/SaturnBackdrop";
 export default function HomePage() {
   return (
     <main className="relative min-h-screen overflow-hidden">
-      <SaturnBackdrop className="absolute inset-0" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[42vh] opacity-40">
-        <Image src="/brand/banner.png" alt="" fill className="object-cover object-top" priority />
-        <div className="absolute inset-0 bg-gradient-to-b from-void/20 via-void/55 to-void" />
+      <SaturnBackdrop className="absolute inset-0 opacity-80" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[62vh]">
+        <Image src="/brand/banner.png?v=3" alt="" fill className="object-cover object-[center_20%]" priority />
+        <div className="absolute inset-0 bg-gradient-to-b from-void/10 via-void/35 to-void" />
       </div>
       <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col justify-end px-5 pb-24 pt-28">
-        <div className="mb-6 flex items-center gap-4">
-          <Image
-            src="/brand/icon.png"
-            alt="Apogee mark"
-            width={72}
-            height={72}
-            className="rounded-full ring-1 ring-gold/50 shadow-gold"
-            priority
-          />
-          <p className="text-[11px] uppercase tracking-[0.42em] text-gold">Saturn black · gold · ember · flare</p>
-        </div>
-        <h1 className="apogee-title mt-2 font-display text-5xl leading-none text-ivory sm:text-7xl md:text-8xl">
-          APOGEE
-        </h1>
+        <Image
+          src="/brand/logo.png?v=3"
+          alt="Apogee"
+          width={920}
+          height={518}
+          className="w-full max-w-xl drop-shadow-[0_20px_80px_rgba(255,107,26,0.25)]"
+          priority
+        />
+        <h1 className="sr-only">Apogee — Robinhood Chain MCP</h1>
         <p className="mt-5 max-w-xl text-lg text-ivory/75">
           Robinhood Chain intel for agents. Search. Chart. Desk. Launch. Live on-chain indexing of{" "}
           <span className="text-gold">pons</span> v1 and v2. No login — add the MCP to Cursor, Claude, ChatGPT, or any
