@@ -24,6 +24,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/developers",
     "/developers/tools",
     "/developers/status",
+    "/developers/access",
+    "/developers/partners",
     "/whitepaper",
     "/data-usage",
     "/availability",

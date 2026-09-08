@@ -192,6 +192,8 @@ export const FOOTER = {
   ],
   resources: [
     { href: "/developers", label: "Developers" },
+    { href: "/developers/access", label: "MCP access" },
+    { href: "/developers/partners", label: "Partners" },
     { href: "/about", label: "About" },
     { href: "/guides", label: "Guides" },
     { href: "/faq", label: "FAQ" },

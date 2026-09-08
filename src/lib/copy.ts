@@ -140,6 +140,14 @@ export const FAQ = [
         a: "The website, /api/v1, and /api/mcp share src/lib/dispatch.ts. A scan on Desk is the same engine an agent calls.",
       },
       {
+        q: "Do I need $ORBITX to use MCP?",
+        a: "No. Live MCP is auth none. /developers/access describes an intended $ORBITX rental/permanent burn model. It is not enabled; there is no checkout and no burn counter.",
+      },
+      {
+        q: "Can I embed Apogee in my own product?",
+        a: "Yes. Connect https://apogeemcp.digital/api/mcp or REST /api/v1. Partnership conversations: /developers/partners. That form does not sell access.",
+      },
+      {
         q: "How does Orbit use MCP?",
         a: "Orbit POSTs /api/agent, which runs dispatchTool. NVIDIA, when enabled, chooses tools; otherwise intents map to the same functions.",
       },

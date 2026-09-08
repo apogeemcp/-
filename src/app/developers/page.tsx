@@ -26,6 +26,12 @@ export default function DevelopersHome() {
           <Link href="/developers/tools" className="btn-ghost">
             View tools
           </Link>
+          <Link href="/developers/access" className="btn-ghost">
+            Access
+          </Link>
+          <Link href="/developers/partners" className="btn-ghost">
+            Partners
+          </Link>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <a href={GITHUB_REPO} className="btn-ghost" target="_blank" rel="noreferrer">
@@ -64,6 +70,8 @@ export default function DevelopersHome() {
         <p className="text-sm leading-relaxed text-ivory/80">
           Structured access is the live MCP at {CANONICAL_MCP} (auth none) and REST /api/v1. Catalog size{" "}
           {PRODUCT.toolCount}. Server {VERSIONING.serverName} {VERSIONING.product}, protocol {VERSIONING.mcpProtocol}.
+          Other products can call the same tools without sending their users here. A $ORBITX burn-gated access model is
+          documented as intent — it is not live and MCP is not sold from this site.
         </p>
       </section>
 

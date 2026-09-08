@@ -8,6 +8,7 @@ Internal gate for Apogee (`apogeemcp.digital`). Do not claim a box is done unles
 - Chain is EIP-155 **4663**, DexScreener/Gecko slug **`robinhood`**.
 - MCP is Streamable HTTP `POST /api/mcp` (alias `/mcp`), protocol `2025-03-26`, **`auth: none`**.
 - There are **no user accounts**, OAuth, API keys, paid MCP tiers, or cost-basis PnL.
+- `$ORBITX` burn-gated access is documented intent on `/developers/access`, not a live shop. Do not fake burns.
 - GitHub is `https://github.com/apogeemcp/-`. Project CA is copy-only — no invented explorer.
 
 ## Gate
