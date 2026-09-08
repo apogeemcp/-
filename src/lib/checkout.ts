@@ -85,29 +85,6 @@ export async function submitSolscanPayment(input: {
   if (!parsed.ok) {
     throw Object.assign(new Error(parsed.error), { status: 400 });
   }
-  if (!supabaseAdmin()) {
-    throw Object.assign(new Error("Payment inbox is not configured (missing service role). Access cannot be recorded."), {
-      status: 503,
-    });
-  }
-
-  const existing = await sbRest<PurchaseRow[]>(
-    `apogee_mcp_purchases?tx_signature=eq.${encodeURIComponent(parsed.signature)}&select=id,wallet,plan_id,status,tx_signature`,
-  );
-  const prior = existing.data?.[0];
-  if (prior?.status === "confirmed") {
-    return {
-      ok: true,
-      state: "purchase_confirmed",
-      reason: "This Solscan transaction was already used. Access was not granted a second time.",
-      quote,
-      purchaseId: prior.id,
-      grantId: null,
-      proof: null,
-      explorerUrl: solscanTxUrl(parsed.signature),
-      access: null,
-    };
-  }
 
   let verified: Awaited<ReturnType<typeof verifyTreasuryPayment>>;
   try {
@@ -135,6 +112,30 @@ export async function submitSolscanPayment(input: {
       grantId: null,
       proof: null,
       explorerUrl: solscanTxUrl(parsed.signature),
+      access: null,
+    };
+  }
+
+  if (!supabaseAdmin()) {
+    throw Object.assign(new Error("Payment was seen on-chain, but access cannot be stored (missing service role)."), {
+      status: 503,
+    });
+  }
+
+  const existing = await sbRest<PurchaseRow[]>(
+    `apogee_mcp_purchases?tx_signature=eq.${encodeURIComponent(parsed.signature)}&select=id,wallet,plan_id,status,tx_signature`,
+  );
+  const prior = existing.data?.[0];
+  if (prior?.status === "confirmed") {
+    return {
+      ok: true,
+      state: "purchase_confirmed",
+      reason: "This Solscan transaction was already used. Access was not granted a second time.",
+      quote,
+      purchaseId: prior.id,
+      grantId: null,
+      proof: verified.proof,
+      explorerUrl: verified.proof.explorerUrl,
       access: null,
     };
   }
