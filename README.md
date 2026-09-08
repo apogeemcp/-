@@ -50,6 +50,12 @@ npm run dev
 
 Open `http://localhost:3000/dashboard`.
 
+## Vercel
+
+Git deploys are linked to the `apogeemcp.digital` project. This is a **Next.js 15** app — `vercel.json` pins `framework: "nextjs"` so Vercel does not use the Vite/`dist` preset from the empty `main` import.
+
+Public MCP (no auth): `https://<host>/api/mcp` and `https://<host>/mcp`.
+
 ## Stack
 
 - Next.js 15 app (3D Saturn desk, legal pages, MCP HTTP)

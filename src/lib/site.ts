@@ -1,7 +1,20 @@
 import { CHAIN } from "./chain";
 
+function vercelHost(): string | undefined {
+  const raw =
+    process.env.VERCEL_ENV === "production"
+      ? process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL
+      : process.env.VERCEL_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (!raw) return undefined;
+  return raw.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
 export function publicSiteUrl(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicit) return explicit.replace(/\/$/, "");
+  const host = vercelHost();
+  if (host) return `https://${host}`;
+  return "http://localhost:3000";
 }
 
 export function supabaseUrl(): string {

@@ -3,6 +3,7 @@ import { Syne, Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { publicSiteUrl } from "@/lib/site";
 
 const syne = Syne({ subsets: ["latin"], variable: "--font-display" });
 const instrument = Instrument_Sans({ subsets: ["latin"], variable: "--font-body" });
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   title: "Apogee — Robinhood Chain MCP",
   description:
     "Apogee is Robinhood Chain intel for agents. Search. Chart. Desk. Launch. Live pons indexing. No login — add the MCP to any AI app.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  metadataBase: new URL(publicSiteUrl()),
   icons: {
     icon: [{ url: "/brand/icon.png?v=3", type: "image/png" }],
     apple: [{ url: "/apple-touch-icon.png?v=3" }],
