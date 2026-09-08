@@ -36,7 +36,7 @@ export function Nav() {
           <div className="flex min-w-0 items-center gap-2">
             <Link
               href="/connect"
-              className="hidden min-w-0 max-w-[46vw] truncate rounded-md border border-white/10 bg-black/40 px-2.5 py-1 font-mono text-[11px] text-gold/90 hover:border-gold/40 lg:inline"
+              className="hidden min-w-0 max-w-[42vw] truncate rounded-md border border-white/10 bg-black/40 px-2.5 py-1 font-mono text-[11px] text-gold hover:border-gold/40 xl:inline"
               title={mcp}
             >
               {mcp.replace("https://", "")}

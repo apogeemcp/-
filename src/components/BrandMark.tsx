@@ -10,8 +10,8 @@ export function BrandMark({ size = 32, wordmark = true }: { size?: number; wordm
       </span>
       {wordmark ? (
         <span className="flex min-w-0 flex-col leading-none">
-          <span className="font-display text-[17px] tracking-[0.18em] text-ivory sm:text-[18px] sm:tracking-[0.28em]">APOGEE</span>
-          <span className="mt-1 hidden max-w-[14rem] truncate font-script text-[13px] text-gold/90 sm:inline">Robinhood Chain intel</span>
+          <span className="font-display text-[17px] tracking-[0.12em] text-ivory sm:text-[18px] sm:tracking-[0.22em]">APOGEE</span>
+          <span className="mt-1 hidden max-w-[14rem] truncate font-script text-[13px] text-gold sm:inline">Robinhood Chain intel</span>
         </span>
       ) : null}
     </Link>

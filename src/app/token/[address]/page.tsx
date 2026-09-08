@@ -11,7 +11,7 @@ export default async function TokenPage({ params }: { params: Promise<{ address:
         compact
         kicker="Token terminal"
         title={ok ? "Market" : "Unknown token"}
-        lede={ok ? `${address} on Robinhood Chain. Live DexScreener, explorer, and pons factory reads — no fabricated fields.` : "Provide a 0x contract."}
+        lede={ok ? "Live DexScreener, GeckoTerminal trades, and pons factory reads — no fabricated fields." : "Provide a 0x contract."}
       />
       <PageFrame>{ok ? <TokenView address={address} /> : <p className="text-sm text-flare">Invalid address.</p>}</PageFrame>
     </main>

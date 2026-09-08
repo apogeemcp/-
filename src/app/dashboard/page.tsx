@@ -13,7 +13,7 @@ export default function DashboardPage() {
         lede={`Live Robinhood Chain scan, trending, Stock Token desk, and pons. MCP ${CANONICAL_MCP} — ${PRODUCT.toolCount} catalog operations.`}
       />
       <PageFrame>
-        <Suspense fallback={<p className="text-ivory/50">Loading scan…</p>}>
+        <Suspense fallback={<p className="text-ivory/70">Loading scan…</p>}>
           <ScanBox />
         </Suspense>
         <DeskLive />

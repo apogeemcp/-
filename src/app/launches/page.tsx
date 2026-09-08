@@ -14,7 +14,7 @@ export default function LaunchesPage() {
         <section className="panel rounded-xl p-6">
           <LaunchPad />
         </section>
-        <p className="text-xs leading-relaxed text-ivory/40">{LEGAL.pons}</p>
+        <p className="text-xs leading-relaxed text-ivory/70">{LEGAL.pons}</p>
       </PageFrame>
     </main>
   );

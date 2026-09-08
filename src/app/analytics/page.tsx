@@ -13,7 +13,7 @@ export default function AnalyticsPage() {
       />
       <PageFrame>
         <AnalyticsDesk />
-        <p className="text-xs leading-relaxed text-ivory/40">{LEGAL.data}</p>
+        <p className="text-xs leading-relaxed text-ivory/70">{LEGAL.data}</p>
       </PageFrame>
     </main>
   );

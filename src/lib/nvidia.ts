@@ -9,7 +9,13 @@ export function nvidiaEnabled(): boolean {
   return Boolean(nvidiaKey());
 }
 
-export type ChatMsg = { role: "system" | "user" | "assistant" | "tool"; content: string; name?: string; tool_call_id?: string };
+export type ChatMsg = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  name?: string;
+  tool_call_id?: string;
+  tool_calls?: ToolCall[];
+};
 export type ToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
 
 type NimTool = {
@@ -34,6 +40,7 @@ export async function nvidiaChat(opts: {
       "content-type": "application/json",
       accept: "application/json",
     },
+    signal: AbortSignal.timeout(20_000),
     body: JSON.stringify({
       model: NVIDIA_MODEL,
       messages: opts.messages,

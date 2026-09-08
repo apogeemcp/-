@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { letterMark, mediaUrl } from "@/lib/media";
+import { ipfsGateways, letterMark } from "@/lib/media";
 
 export function TokenMedia({
   src,
@@ -14,9 +14,10 @@ export function TokenMedia({
   name?: string | null;
   size?: number;
 }) {
-  const [failed, setFailed] = useState(false);
-  const url = mediaUrl(src);
-  if (!url || failed) {
+  const urls = ipfsGateways(src);
+  const [idx, setIdx] = useState(0);
+  const url = idx < urls.length ? urls[idx] : null;
+  if (!url) {
     return (
       <span
         className="inline-flex shrink-0 items-center justify-center rounded-full bg-gold/15 font-display text-gold ring-1 ring-white/10"
@@ -35,7 +36,7 @@ export function TokenMedia({
       width={size}
       height={size}
       className="shrink-0 rounded-full object-cover ring-1 ring-white/15"
-      onError={() => setFailed(true)}
+      onError={() => setIdx((i) => i + 1)}
     />
   );
 }

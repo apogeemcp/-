@@ -23,7 +23,7 @@ export function Footer() {
             <p className="mt-3 text-[11px] leading-relaxed text-ivory/40">{LEGAL.affiliation}</p>
           </div>
           <div>
-            <p className="kicker text-ivory/35">App</p>
+            <p className="kicker">App</p>
             <ul className="mt-3 space-y-2 text-sm text-ivory/70">
               {TABS.map((t) => (
                 <li key={t.href}>
@@ -36,7 +36,7 @@ export function Footer() {
             </ul>
           </div>
           <div>
-            <p className="kicker text-ivory/35">Setup & legal</p>
+            <p className="kicker">Setup & legal</p>
             <ul className="mt-3 space-y-2 text-sm text-ivory/70">
               {MORE_LINKS.map((t) => (
                 <li key={t.href}>
@@ -48,7 +48,7 @@ export function Footer() {
             </ul>
           </div>
           <div>
-            <p className="kicker text-ivory/35">Network</p>
+            <p className="kicker">Network</p>
             <ul className="mt-3 space-y-2 text-sm text-ivory/65">
               <li>
                 {CHAIN.name} · {CHAIN.id}

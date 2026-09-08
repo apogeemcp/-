@@ -27,11 +27,14 @@ export function OrbitChat() {
     const history = msgs.map((m) => ({ role: m.role, content: m.content }));
     setMsgs((m) => [...m, { role: "user", content: prompt }]);
     setBusy(true);
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 40_000);
     try {
       const res = await fetch("/api/agent", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ prompt, history }),
+        signal: ctl.signal,
       });
       const json = await res.json();
       const unsigned = json.prepared?.unsignedTx as { to: string; data: string; value: string } | undefined;
@@ -46,8 +49,9 @@ export function OrbitChat() {
         },
       ]);
     } catch (e) {
-      setMsgs((m) => [...m, { role: "assistant", content: String(e) }]);
+      setMsgs((m) => [...m, { role: "assistant", content: e instanceof Error && e.name === "AbortError" ? "Timed out waiting for Orbit. Try a narrower prompt." : String(e) }]);
     } finally {
+      clearTimeout(timer);
       setBusy(false);
     }
   }

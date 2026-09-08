@@ -16,10 +16,8 @@ export function AnalyticsDesk() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/v1/get_market_overview")
-      .then((r) => r.json())
-      .then((j) => setOverview(j.result || j))
-      .catch(() => null);
+    void run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function run(e?: React.FormEvent) {
@@ -27,11 +25,13 @@ export function AnalyticsDesk() {
     setBusy(true);
     setError(null);
     try {
-      const [a, s, c] = await Promise.all([
+      const [ov, a, s, c] = await Promise.all([
+        fetch("/api/v1/get_market_overview").then((r) => r.json()),
         fetch(`/api/v1/get_token_analytics?query=${encodeURIComponent(query)}`).then((r) => r.json()),
         fetch(`/api/v1/get_smart_money?query=${encodeURIComponent(query)}`).then((r) => r.json()),
         fetch(`/api/v1/get_chart?query=${encodeURIComponent(query)}&timeframe=minute&aggregate=15`).then((r) => r.json()),
       ]);
+      setOverview(ov.result || ov);
       const ar = a.result || a;
       const tokenAddr = ar?.token?.address || (query.startsWith("0x") ? query : "");
       setAnalytics(ar);
@@ -90,6 +90,10 @@ export function AnalyticsDesk() {
             ["Volume", analytics.volume != null ? `$${Number(analytics.volume).toLocaleString()}` : "—"],
             ["Liquidity", analytics.liquidityUsd != null ? `$${Number(analytics.liquidityUsd).toLocaleString()}` : "—"],
             ["Buy / sell", `${tx?.buys ?? analytics.buys ?? "—"} / ${tx?.sells ?? analytics.sells ?? "—"}`],
+            ["Change", analytics.changePct != null ? `${Number(analytics.changePct).toFixed(2)}%` : "—"],
+            ["FDV", analytics.fdv != null ? `$${Number(analytics.fdv).toLocaleString()}` : "—"],
+            ["Ratio", analytics.buySellRatio != null ? Number(analytics.buySellRatio).toFixed(2) : "—"],
+            ["DEX", String(analytics.dex || "—")],
           ].map(([k, v]) => (
             <div key={k} className="panel rounded-xl p-4">
               <p className="kicker">{k}</p>
@@ -121,11 +125,26 @@ export function AnalyticsDesk() {
         </div>
       ) : null}
       {activity?.ok ? (
-        <div className="panel rounded-xl p-5">
-          <p className="kicker">Burns in sample</p>
-          <p className="mt-2 font-mono text-sm text-ivory">
-            {activity.burnedAmount != null ? Number(activity.burnedAmount).toPrecision(6) : "—"} · burned USD {String(activity.burnedUsd ?? "—")}
-          </p>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="panel rounded-xl p-5">
+            <p className="kicker">Recent trades</p>
+            <ul className="mt-3 space-y-1 font-mono text-xs text-ivory/85">
+              {(((activity.trades as Array<{ side?: string; usd?: number; hash?: string; explorer?: string }>) || []).slice(0, 10)).map((tx, i) => (
+                <li key={tx.hash || i}>
+                  <span className={tx.side === "buy" ? "text-gold" : "text-flare"}>{tx.side === "buy" ? "BUY" : "SELL"}</span>{" "}
+                  {tx.usd != null ? `$${Number(tx.usd).toFixed(2)}` : ""}
+                </li>
+              ))}
+            </ul>
+            {!((activity.trades as unknown[]) || []).length ? <p className="mt-2 text-sm text-ivory/70">{String(activity.note || "No trades")}</p> : null}
+          </div>
+          <div className="panel rounded-xl p-5">
+            <p className="kicker">Burns in sample</p>
+            <p className="mt-2 font-mono text-sm text-ivory">
+              {activity.burnedAmount != null ? Number(activity.burnedAmount).toPrecision(6) : "—"} · burned USD {String(activity.burnedUsd ?? "—")}
+            </p>
+            <p className="mt-2 text-xs text-ivory/70">{String(activity.note || "")}</p>
+          </div>
         </div>
       ) : null}
       {smartRows.length ? (

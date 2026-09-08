@@ -69,7 +69,14 @@ function summarize(tool: string, result: unknown): string {
   }
   if (tool === "get_desk" || tool === "get_market_overview") {
     const chain = (r.chain || r) as Record<string, unknown>;
-    return `Desk: block ${chain.block ?? "—"} · TVL ${money(chain.tvlUsd ?? r.tvlUsd)} · gas ${r.gas ?? chain.gas ?? "—"}`;
+    const trend = Array.isArray(r.trending) ? (r.trending as Array<{ name?: string; symbol?: string; change1h?: number }>).slice(0, 5) : [];
+    const names = trend.map((t) => `${t.symbol || t.name || "pool"}${t.change1h != null ? ` ${Number(t.change1h).toFixed(1)}%` : ""}`).join(", ");
+    return [
+      `Desk: block ${chain.block ?? "—"} · TVL ${money(chain.tvlUsd ?? r.tvlUsd)} · gas ${r.gas ?? chain.gas ?? "—"}`,
+      names ? `Trending: ${names}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
   if (tool === "list_pons_launches" || tool === "list_launches") {
     const n = Array.isArray(r.launches) ? r.launches.length : 0;
@@ -104,6 +111,7 @@ async function nvidiaLoop(prompt: string, history: AgentMessage[]) {
       messages.push({
         role: "assistant",
         content: turn.content || "",
+        tool_calls: turn.tool_calls,
       });
       for (const tc of turn.tool_calls) {
         let args: Record<string, unknown> = {};
@@ -223,7 +231,6 @@ async function heuristicAgent(prompt: string, history: AgentMessage[]) {
 
   if (intent === "desk") {
     const desk = await call("get_desk", {});
-    await call("list_trending", { duration: "1h" });
     return { ok: true, intent, model: "mcp-tools", reply: summarize("get_desk", desk), calls };
   }
 

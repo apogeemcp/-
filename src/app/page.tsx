@@ -53,7 +53,7 @@ export default function HomePage() {
             <Link key={p.name} href={p.href} className="panel rounded-xl px-4 py-5 hover:border-gold/35">
               <p className="font-mono text-[10px] text-ivory/35">0{i + 1}</p>
               <p className="mt-2 font-display text-xl text-ivory">{p.name}</p>
-              <p className="mt-1 text-xs leading-relaxed text-ivory/50">{p.blurb}</p>
+              <p className="mt-1 text-xs leading-relaxed text-ivory/70">{p.blurb}</p>
             </Link>
           ))}
         </div>
@@ -65,11 +65,11 @@ export default function HomePage() {
           ].map(([t, d, href]) => (
             <Link key={t} href={href} className="panel rounded-xl p-5 hover:border-gold/35">
               <p className="kicker">{t}</p>
-              <p className="mt-3 text-sm leading-relaxed text-ivory/65">{d}</p>
+              <p className="mt-3 text-sm leading-relaxed text-ivory/75">{d}</p>
             </Link>
           ))}
         </div>
-        <p className="text-xs leading-relaxed text-ivory/40">
+        <p className="text-xs leading-relaxed text-ivory/70">
           {LEGAL.affiliation} {LEGAL.stock} {LEGAL.pons}
         </p>
       </PageFrame>

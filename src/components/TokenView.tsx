@@ -25,6 +25,16 @@ function usd(n: unknown) {
   return `$${v.toLocaleString(undefined, { maximumFractionDigits: 6 })}`;
 }
 
+function ago(ts: unknown) {
+  const n = typeof ts === "number" ? ts : Number(ts);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const s = Math.max(0, Math.floor(Date.now() / 1000 - n));
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+}
+
 export function TokenView({ address }: { address: string }) {
   const { address: wallet } = useWallet();
   const [busy, setBusy] = useState(true);
@@ -35,6 +45,7 @@ export function TokenView({ address }: { address: string }) {
   const [activity, setActivity] = useState<AnyRec | null>(null);
   const [pons, setPons] = useState<AnyRec | null>(null);
   const [chart, setChart] = useState<AnyRec | null>(null);
+  const [siblings, setSiblings] = useState<AnyRec[]>([]);
   const [tf, setTf] = useState<{ timeframe: string; aggregate: number; label: string }>({
     timeframe: "minute",
     aggregate: 5,
@@ -71,6 +82,20 @@ export function TokenView({ address }: { address: string }) {
 
   useEffect(() => {
     let live = true;
+    const tick = () => {
+      tool("get_token_activity", { query: address })
+        .then((act) => live && setActivity(act))
+        .catch(() => null);
+    };
+    const id = setInterval(tick, 20_000);
+    return () => {
+      live = false;
+      clearInterval(id);
+    };
+  }, [address]);
+
+  useEffect(() => {
+    let live = true;
     tool("get_chart", { query: address, timeframe: tf.timeframe, aggregate: String(tf.aggregate) })
       .then((c) => live && setChart(c))
       .catch(() => null);
@@ -86,21 +111,54 @@ export function TokenView({ address }: { address: string }) {
       .catch(() => null);
   }, [wallet]);
 
+  useEffect(() => {
+    const creator = String((pons as { deployer?: string; launch?: { deployer?: string } } | null)?.deployer || (pons as { launch?: { deployer?: string } } | null)?.launch?.deployer || "");
+    if (!creator) return;
+    let live = true;
+    tool("list_pons_launches", { limit: "24" })
+      .then((j) => {
+        if (!live) return;
+        const rows = ((j.launches as AnyRec[]) || []).filter((l) => String(l.deployer || "").toLowerCase() === creator.toLowerCase());
+        setSiblings(rows);
+      })
+      .catch(() => null);
+    return () => {
+      live = false;
+    };
+  }, [pons]);
+
   const t = (token?.token || token || {}) as AnyRec;
-  const socials = (t.socials || {}) as { website?: string | null; x?: string | null; telegram?: string | null };
+  const socials = (t.socials || {}) as { website?: string | null; x?: string | null; telegram?: string | null; discord?: string | null; image?: string | null; banner?: string | null };
   const meta = (pons?.meta || {}) as AnyRec;
-  const image = String(t.image || meta.logo || socials && (t as AnyRec).image || "") || null;
+  const image = String(t.image || socials.image || meta.logo || "") || null;
+  const banner = String(t.banner || socials.banner || "") || null;
   const ca = String(t.address || address);
   const bars = (chart?.bars as Array<Record<string, number>>) || [];
-  const trades = ((activity?.trades || activity?.transfers || []) as Array<AnyRec>).slice(0, 24);
+  const trades = ((activity?.trades || []) as Array<AnyRec>).slice(0, 24);
   const burns = ((activity?.burns || []) as Array<AnyRec>).slice(0, 16);
   const topHolders = ((holders?.top || []) as Array<AnyRec>).slice(0, 12);
+  const onchain = (token?.onchain || {}) as AnyRec;
+  const flags = (token?.flags || {}) as AnyRec;
   const position = useMemo(() => {
     const rows = (pnl?.positions as Array<AnyRec> | undefined) || [];
     return rows.find((p) => String(p.token || "").toLowerCase() === ca.toLowerCase()) || null;
   }, [pnl, ca]);
+  const fees = (pons?.fees || pons?.feePolicy || null) as AnyRec | null;
+  const creator = String(pons?.deployer || meta.tokenDeployer || (pons?.launch as AnyRec | undefined)?.deployer || "");
 
-  if (busy) return <p className="text-sm text-ivory/70">Loading token terminal…</p>;
+  if (busy) {
+    return (
+      <div className="space-y-4">
+        <div className="panel h-40 animate-pulse rounded-xl" />
+        <div className="grid gap-3 sm:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="panel h-20 animate-pulse rounded-xl" />
+          ))}
+        </div>
+        <p className="text-sm text-ivory/70">Loading token terminal…</p>
+      </div>
+    );
+  }
   if (error) return <p className="text-sm text-flare">{error}</p>;
 
   const frames = [
@@ -110,10 +168,15 @@ export function TokenView({ address }: { address: string }) {
     { label: "1h", timeframe: "hour", aggregate: 1 },
     { label: "4h", timeframe: "hour", aggregate: 4 },
     { label: "1D", timeframe: "day", aggregate: 1 },
+    { label: "ALL", timeframe: "day", aggregate: 1 },
   ];
 
   return (
     <div className="space-y-6">
+      {banner ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={banner} alt="" className="h-28 w-full rounded-xl object-cover ring-1 ring-white/10 sm:h-40" />
+      ) : null}
       <section className="panel rounded-xl p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
@@ -123,8 +186,9 @@ export function TokenView({ address }: { address: string }) {
                 {String(t.name || meta.name || "Token")}{" "}
                 <span className="font-mono text-base text-gold">{String(t.symbol || meta.symbol || "")}</span>
               </h2>
-              <p className="mt-1 text-sm text-ivory/70">
+              <p className="mt-1 text-sm text-ivory/75">
                 {CHAIN.name} · {t.canonicalStock ? "canonical Stock Token" : pons ? `pons ${pons.generation || ""}` : "market token"}
+                {t.gtVerified ? " · Gecko verified" : ""}
               </p>
               <p className="mt-2 break-all font-mono text-xs text-ivory/80">{ca}</p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -132,10 +196,12 @@ export function TokenView({ address }: { address: string }) {
                 <a className="btn-ghost text-xs" href={explorerToken(ca)} target="_blank" rel="noreferrer">
                   Explorer
                 </a>
-                {socials.website ? (
-                  <a className="btn-ghost text-xs" href={String(socials.website)} target="_blank" rel="noreferrer">
-                    Website
-                  </a>
+                {socials.website || t.description ? (
+                  socials.website ? (
+                    <a className="btn-ghost text-xs" href={String(socials.website)} target="_blank" rel="noreferrer">
+                      Website
+                    </a>
+                  ) : null
                 ) : null}
                 {socials.x ? (
                   <a className="btn-ghost text-xs" href={String(socials.x)} target="_blank" rel="noreferrer">
@@ -145,6 +211,11 @@ export function TokenView({ address }: { address: string }) {
                 {socials.telegram ? (
                   <a className="btn-ghost text-xs" href={String(socials.telegram)} target="_blank" rel="noreferrer">
                     Telegram
+                  </a>
+                ) : null}
+                {socials.discord ? (
+                  <a className="btn-ghost text-xs" href={String(socials.discord)} target="_blank" rel="noreferrer">
+                    Discord
                   </a>
                 ) : null}
               </div>
@@ -161,19 +232,25 @@ export function TokenView({ address }: { address: string }) {
             </div>
           </dl>
         </div>
-        {meta.description ? <p className="mt-4 text-sm leading-relaxed text-ivory/75">{String(meta.description)}</p> : null}
+        {t.description || meta.description ? (
+          <p className="mt-4 text-sm leading-relaxed text-ivory/75">{String(t.description || meta.description)}</p>
+        ) : null}
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ["Liquidity", usd(t.liquidity ?? analytics?.liquidityUsd)],
-          ["Volume", usd(t.volume24h ?? analytics?.volume)],
-          ["Buys / sells", `${analytics?.buys ?? "—"} / ${analytics?.sells ?? "—"}`],
-          ["Change", analytics?.changePct != null ? `${analytics.changePct}%` : "—"],
+          ["Volume 24h", usd(t.volume24h ?? analytics?.volume)],
+          ["Buys / sells", `${analytics?.buys ?? activity?.buys ?? "—"} / ${analytics?.sells ?? activity?.sells ?? "—"}`],
+          ["Change", analytics?.changePct != null ? `${Number(analytics.changePct).toFixed(2)}%` : "—"],
+          ["Supply", t.totalSupply != null ? String(t.totalSupply) : onchain.totalSupply != null ? String(onchain.totalSupply) : "—"],
+          ["Decimals", t.decimals != null ? String(t.decimals) : onchain.decimals != null ? String(onchain.decimals) : "—"],
+          ["Score", token?.score && typeof token.score === "object" ? String((token.score as AnyRec).total ?? "—") : "—"],
+          ["Risk", flags.unverifiedLookalike ? "lookalike flag" : flags.tickerCollision ? "ticker collision" : t.canonicalStock ? "canonical" : "unscored extras"],
         ].map(([k, v]) => (
           <div key={k} className="panel rounded-xl p-4">
             <p className="kicker">{k}</p>
-            <p className="mt-2 font-mono text-sm text-ivory">{v}</p>
+            <p className="mt-2 break-all font-mono text-sm text-ivory">{v}</p>
           </div>
         ))}
       </section>
@@ -194,11 +271,7 @@ export function TokenView({ address }: { address: string }) {
             ))}
           </div>
         </div>
-        {chart?.ok === false ? (
-          <p className="text-sm text-ivory/70">{String(chart.error)}</p>
-        ) : (
-          <PriceChart bars={bars} />
-        )}
+        {chart?.ok === false ? <p className="text-sm text-ivory/70">{String(chart.error)}</p> : <PriceChart bars={bars} />}
       </section>
 
       {position ? (
@@ -207,17 +280,22 @@ export function TokenView({ address }: { address: string }) {
           <p className="mt-2 font-mono text-sm text-ivory">
             {String(position.formatted)} {String(position.symbol || t.symbol || "")} · mark {usd(position.usd)}
           </p>
-          <p className="mt-2 text-xs text-ivory/65">
+          <p className="mt-2 text-xs text-ivory/70">
             Mark-to-market only. Cost basis is not recovered when explorer history is truncated — no fabricated PnL.
           </p>
+        </section>
+      ) : wallet ? (
+        <section className="panel rounded-xl p-5">
+          <h3 className="font-heading text-xl text-ivory">Your position</h3>
+          <p className="mt-2 text-sm text-ivory/75">Connected wallet has no watched balance in this token.</p>
         </section>
       ) : null}
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="panel rounded-xl p-5">
           <h3 className="font-heading text-xl text-ivory">Holders (proxy)</h3>
-          <p className="mt-1 text-xs text-ivory/65">
-            {holders?.holderCountProxy != null ? `${holders.holderCountProxy} wallets in recent flow` : "No holder sample"}
+          <p className="mt-1 text-xs text-ivory/70">
+            {holders?.holderCountProxy != null ? `${holders.holderCountProxy} wallets in sample` : "No holder sample"}
             {holders?.concentrationTop10 != null ? ` · top 10 ${Number(holders.concentrationTop10).toFixed(1)}% of sample` : ""}
           </p>
           <ul className="mt-3 space-y-2">
@@ -231,7 +309,7 @@ export function TokenView({ address }: { address: string }) {
                 </li>
               ))
             ) : (
-              <li className="text-sm text-ivory/65">{String(holders?.note || "No holder proxy yet.")}</li>
+              <li className="text-sm text-ivory/70">{String(holders?.note || "No holder proxy yet.")}</li>
             )}
           </ul>
         </div>
@@ -243,27 +321,47 @@ export function TokenView({ address }: { address: string }) {
                 <dt>Generation</dt>
                 <dd className="font-mono">{String(pons.generation || "—")}</dd>
               </div>
-              {pons.deployer || meta.tokenDeployer ? (
+              {creator ? (
                 <div className="flex justify-between gap-3">
                   <dt>Creator</dt>
                   <dd>
-                    <a className="font-mono text-gold" href={explorerAddress(String(pons.deployer || meta.tokenDeployer))} target="_blank" rel="noreferrer">
-                      {shortAddress(String(pons.deployer || meta.tokenDeployer))}
-                    </a>
+                    <Link className="font-mono text-gold" href={`/wallet?address=${creator}`}>
+                      {shortAddress(creator)}
+                    </Link>
                   </dd>
                 </div>
               ) : null}
-              {pons.fees ? (
-                <div>
-                  <dt>Fee split</dt>
-                  <dd className="mt-1 font-mono text-xs">{JSON.stringify(pons.fees)}</dd>
+              {fees ? (
+                <div className="text-xs">
+                  <dt className="kicker">Fee policy (on-chain)</dt>
+                  <dd className="mt-1 font-mono text-ivory/80">
+                    {fees.creatorSharePct != null
+                      ? `creator ${fees.creatorSharePct}% · protocol ${fees.protocolSharePct}%`
+                      : fees.creatorPct != null
+                        ? `creator ${fees.creatorPct}%`
+                        : JSON.stringify(fees)}
+                  </dd>
                 </div>
               ) : (
-                <p className="text-xs text-ivory/65">Fee totals are not fully indexed on-chain in this window. Split policy is shown when the locker returns it.</p>
+                <p className="text-xs text-ivory/70">Fee totals are not fully indexed. Split policy is shown when the locker returns it.</p>
+              )}
+              {siblings.length ? (
+                <div>
+                  <dt>Other launches by creator in this window</dt>
+                  <dd className="mt-1 space-y-1">
+                    {siblings.slice(0, 6).map((l) => (
+                      <Link key={String(l.token)} href={`/token/${l.token}`} className="block font-mono text-xs text-gold">
+                        {String(l.symbol || l.name || l.token)}
+                      </Link>
+                    ))}
+                  </dd>
+                </div>
+              ) : (
+                <p className="text-xs text-ivory/70">No other pons launches by this deployer in the current log window.</p>
               )}
             </dl>
           ) : (
-            <p className="mt-3 text-sm text-ivory/65">No pons factory record for this contract. Creator/fee fields stay empty rather than guessed.</p>
+            <p className="mt-3 text-sm text-ivory/70">No pons factory record for this contract. Creator/fee fields stay empty rather than guessed.</p>
           )}
         </div>
       </section>
@@ -271,20 +369,24 @@ export function TokenView({ address }: { address: string }) {
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="panel rounded-xl p-5">
           <h3 className="font-heading text-xl text-ivory">Live buys / sells</h3>
+          <p className="mt-1 text-xs text-ivory/70">{String(activity?.note || "Refreshing every 20s.")}</p>
           <ul className="mt-3 space-y-2">
             {trades.length ? (
               trades.map((tx, i) => (
-                <li key={String(tx.hash || i)} className="flex items-baseline justify-between gap-3 text-xs">
+                <li key={String(tx.hash || i)} className="grid grid-cols-[4.5rem_1fr_auto] items-baseline gap-2 text-xs">
                   <span className={tx.side === "buy" ? "text-gold" : tx.side === "sell" ? "text-flare" : "text-ivory/70"}>
                     {tx.side === "buy" ? "🟢 BUY" : tx.side === "sell" ? "🔴 SELL" : String(tx.side)}
                   </span>
-                  <a className="truncate font-mono text-ivory/80 hover:text-gold" href={String(tx.explorer || "#")} target="_blank" rel="noreferrer">
-                    {usd(tx.usd)} · {tx.hash ? String(tx.hash).slice(0, 10) : ""}
+                  <Link className="truncate font-mono text-ivory/80 hover:text-gold" href={`/wallet?address=${tx.wallet || tx.to || ""}`}>
+                    {shortAddress(String(tx.wallet || tx.to || ""))}
+                  </Link>
+                  <a className="font-mono text-ivory/80 hover:text-gold" href={String(tx.explorer || "#")} target="_blank" rel="noreferrer">
+                    {usd(tx.usd)} {ago(tx.timestamp)}
                   </a>
                 </li>
               ))
             ) : (
-              <li className="text-sm text-ivory/65">No recent pair-classified trades in the explorer window.</li>
+              <li className="text-sm text-ivory/70">No recent classified trades yet.</li>
             )}
           </ul>
         </div>
@@ -303,7 +405,7 @@ export function TokenView({ address }: { address: string }) {
                 </li>
               ))
             ) : (
-              <li className="text-sm text-ivory/65">No burns to zero/dead in this transfer sample.</li>
+              <li className="text-sm text-ivory/70">No burns in this sample. Explorer transfers are often Cloudflare-gated; we do not invent burns.</li>
             )}
           </ul>
         </div>

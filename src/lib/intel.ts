@@ -25,6 +25,14 @@ import { getCurveQuote, getMcpInfo, preparePonsBuy, preparePonsLaunch, previewPo
 import { CATALOG_SIZE } from "./catalog";
 import { mcpHttpUrl } from "./site";
 import { mediaUrl } from "./media";
+import {
+  geckoNewPools,
+  geckoOhlcv,
+  geckoToken,
+  geckoTokenPools,
+  geckoTopPools,
+  geckoTrending,
+} from "./gecko";
 
 export type DsPair = {
   chainId?: string;
@@ -148,69 +156,20 @@ export async function pairByAddress(pairAddress: string): Promise<DsPair | null>
   return res.data?.pair || res.data?.pairs?.[0] || null;
 }
 
-type GeckoPool = {
-  id?: string;
-  attributes?: Record<string, unknown>;
-  relationships?: Record<string, unknown>;
-};
-
-function geckoPools(data: GeckoPool[] | undefined) {
-  return (data || []).map((row) => {
-    const a = (row.attributes || {}) as Record<string, unknown>;
-    const pc = (a.price_change_percentage as Record<string, unknown>) || {};
-    return {
-      id: row.id,
-      address: a.address,
-      name: a.name,
-      priceUsd: num(a.base_token_price_usd),
-      fdvUsd: num(a.fdv_usd),
-      marketCapUsd: num(a.market_cap_usd),
-      createdAt: a.pool_created_at,
-      reserveUsd: num(a.reserve_in_usd),
-      volume24h: num((a.volume_usd as Record<string, unknown> | undefined)?.h24),
-      change5m: num(pc.m5),
-      change1h: num(pc.h1),
-      change6h: num(pc.h6),
-      change24h: num(pc.h24),
-      txns24h: (a.transactions as Record<string, unknown> | undefined)?.h24 ?? null,
-    };
-  });
-}
-
 export async function trendingPools(duration = "1h") {
-  const res = await fetchJson<{ data?: GeckoPool[] }>(
-    `${ENDPOINTS.gecko}/networks/${CHAIN.geckoNetwork}/trending_pools?duration=${encodeURIComponent(duration)}`,
-    { headers: { accept: "application/json;version=20230302" } },
-  );
-  return geckoPools(res.data?.data);
+  return geckoTrending(duration);
 }
 
 export async function newPools() {
-  const res = await fetchJson<{ data?: GeckoPool[] }>(
-    `${ENDPOINTS.gecko}/networks/${CHAIN.geckoNetwork}/new_pools?page=1`,
-    { headers: { accept: "application/json;version=20230302" } },
-  );
-  return geckoPools(res.data?.data);
+  return geckoNewPools();
 }
 
 export async function topPools() {
-  const res = await fetchJson<{ data?: GeckoPool[] }>(
-    `${ENDPOINTS.gecko}/networks/${CHAIN.geckoNetwork}/pools?page=1`,
-    { headers: { accept: "application/json;version=20230302" } },
-  );
-  return geckoPools(res.data?.data);
+  return geckoTopPools();
 }
 
 export async function ohlcv(pool: string, timeframe = "minute", aggregate = 5, limit = 120) {
-  const res = await fetchJson<{ data?: { attributes?: { ohlcv_list?: number[][] } } }>(
-    `${ENDPOINTS.gecko}/networks/${CHAIN.geckoNetwork}/pools/${pool}/ohlcv/${timeframe}?aggregate=${aggregate}&limit=${Math.min(limit, 1000)}&currency=usd`,
-    { headers: { accept: "application/json;version=20230302" } },
-  );
-  const rows = res.data?.data?.attributes?.ohlcv_list || [];
-  return rows
-    .slice()
-    .reverse()
-    .map(([time, open, high, low, close, volume]) => ({ time, open, high, low, close, volume }));
+  return geckoOhlcv(pool, timeframe, aggregate, limit);
 }
 
 export async function llamaTvl(): Promise<number | null> {
@@ -398,11 +357,38 @@ export async function getToken(addressOrSymbol: string) {
   const scan = await scanToken(addressOrSymbol);
   if (!scan.ok || !("token" in scan) || !scan.token) return scan;
   const address = scan.token.address as string;
-  const [meta, pairs] = await Promise.all([erc20Meta(address).catch(() => null), tokenPairs(address)]);
+  const [meta, pairs, gecko] = await Promise.all([
+    erc20Meta(address).catch(() => null),
+    tokenPairs(address),
+    geckoToken(address).catch(() => null),
+  ]);
+  const socials = {
+    ...((scan.token.socials as Record<string, unknown>) || {}),
+    website: (scan.token.socials as { website?: string | null })?.website || gecko?.website || null,
+    x: (scan.token.socials as { x?: string | null })?.x || gecko?.twitter || null,
+    telegram: (scan.token.socials as { telegram?: string | null })?.telegram || gecko?.telegram || null,
+    discord: gecko?.discord || null,
+    image: (scan.token.socials as { image?: string | null })?.image || gecko?.image || scan.token.image || null,
+    banner: gecko?.banner || (scan.token.socials as { banner?: string | null })?.banner || null,
+  };
   return {
     ok: true,
-    token: scan.token,
+    token: {
+      ...scan.token,
+      image: scan.token.image || gecko?.image || null,
+      banner: gecko?.banner || null,
+      description: gecko?.description || null,
+      decimals: gecko?.decimals ?? meta?.decimals ?? null,
+      totalSupply: gecko?.totalSupply ?? (meta?.totalSupply != null ? String(meta.totalSupply) : null),
+      mcap: scan.token.mcap || gecko?.marketCapUsd || gecko?.fdvUsd || null,
+      liquidity: scan.token.liquidity || gecko?.liquidityUsd || null,
+      volume24h: scan.token.volume24h || gecko?.volume24h || null,
+      gtVerified: gecko?.gtVerified ?? false,
+      gtScore: gecko?.gtScore ?? null,
+      socials,
+    },
     onchain: meta,
+    gecko,
     markets: pairs.slice(0, 12).map(tokenFromPair),
     score: scan.score,
     flags: scan.flags,
@@ -613,14 +599,23 @@ export async function getSwapQuote(params: {
 
 export async function getChart(query: string, timeframe = "minute", aggregate = 5) {
   const pairs = isAddress(query) ? await tokenPairs(query) : await searchDex(query);
-  const pool = pairs[0]?.pairAddress;
+  let pool = pairs[0]?.pairAddress || "";
+  let bars = pool ? await ohlcv(pool, timeframe, aggregate, 180) : [];
+  if (!bars.length && isAddress(query)) {
+    const gPools = await geckoTokenPools(query).catch(() => []);
+    const gPool = gPools[0]?.poolAddress;
+    if (gPool) {
+      pool = gPool;
+      bars = await ohlcv(pool, timeframe, aggregate, 180);
+    }
+  }
   if (!pool) return { ok: false, error: `No pool for ${query}` };
-  const bars = await ohlcv(pool, timeframe, aggregate, 180);
+  if (!bars.length) return { ok: false, error: `No candles yet for ${query}`, pool };
   return {
     ok: true,
     query,
     pool,
-    pair: tokenFromPair(pairs[0]),
+    pair: pairs[0] ? tokenFromPair(pairs[0]) : null,
     timeframe,
     aggregate,
     bars,
