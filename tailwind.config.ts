@@ -5,17 +5,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        void: "#050505",
+        void: "#07070a",
         saturn: "#0b0a0c",
-        ivory: "#f6f1e4",
+        ivory: "#f4f1ea",
+        steel: "#9aa3ad",
+        crimson: "#9b1c2e",
         gold: {
-          DEFAULT: "#d4af37",
-          bright: "#f0d78c",
-          deep: "#a67c1a",
+          DEFAULT: "#c9a227",
+          bright: "#e4c56a",
+          deep: "#8a6c12",
         },
-        ember: "#ff6b1a",
-        flare: "#ff3b1a",
-        blood: "#c1121f",
+        ember: "#e85d04",
+        flare: "#c1121f",
+        blood: "#7a1220",
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],

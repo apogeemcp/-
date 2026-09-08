@@ -65,7 +65,7 @@ export function OrbitChat() {
 
   return (
     <div className="panel flex min-h-[32rem] flex-col rounded-xl p-5">
-      <p className="font-script text-lg text-gold">Orbit AI</p>
+      <p className="font-script text-lg text-ember">Orbit AI</p>
       <div className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
         {msgs.map((m, i) => (
           <div

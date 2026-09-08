@@ -41,7 +41,7 @@ export function LaunchGrid({ launches, compact = false }: { launches: PonsLaunch
         <a
           key={l.token}
           href={`/token/${l.token}`}
-          className="group rounded-xl border border-white/5 bg-black/35 p-4 hover:border-gold/40"
+          className="group rounded-[16px] border border-white/10 bg-black/35 p-4 transition hover:-translate-y-0.5 hover:border-ember/40"
         >
           <div className="flex items-start gap-3">
             <TokenMedia src={l.logo} symbol={l.symbol} name={l.name} size={40} />
@@ -54,7 +54,7 @@ export function LaunchGrid({ launches, compact = false }: { launches: PonsLaunch
                 {l.generation} · {l.quote} · {l.phase || (l.graduated ? "graduated" : "live")}
               </p>
             </div>
-            <span className="text-[10px] uppercase tracking-[0.16em] text-gold">
+            <span className="text-[10px] uppercase tracking-[0.16em] text-ember">
               {l.graduated ? "grad" : `${Math.round((l.progress || 0) * 100)}%`}
             </span>
           </div>

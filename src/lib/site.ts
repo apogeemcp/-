@@ -107,7 +107,7 @@ export const HOSTS = [
   { id: "codex", name: "Codex CLI", file: "~/.codex/config.toml", hint: "[mcp_servers.apogee] url = ..." },
 ] as const;
 
-export const ASSET_V = "4";
+export const ASSET_V = "5";
 
 export function asset(path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -156,8 +156,37 @@ export const TABS = [
 export const MORE_LINKS = [
   { href: "/connect", label: "Connect MCP" },
   { href: "/analytics", label: "Analytics" },
-  { href: "/docs", label: "Tools" },
+  { href: "/about", label: "About" },
+  { href: "/guides", label: "Guides" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/docs", label: "MCP tools" },
+  { href: "/links", label: "Links" },
   { href: "/usage", label: "Usage" },
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
 ] as const;
+
+export const COMMUNITY = {
+  telegram: "https://t.me/orbitxwrld",
+  x: "https://x.com/apogeemcp",
+  website: CANONICAL_ORIGIN,
+} as const;
+
+export const PROJECT_CA = "13H4WJvGEg4xrrBwWn2vsQgz7xhmhxgNdw19i1QsxPX9";
+
+export const FOOTER = {
+  line: "AI × MARKET INTELLIGENCE × MCP",
+  platform: [
+    { href: "/", label: "Home" },
+    { href: "/dashboard", label: "Desk" },
+    { href: "/launches", label: "Launch" },
+    { href: "/orbit", label: "Orbit" },
+    { href: "/analytics", label: "Analytics" },
+  ],
+  resources: [
+    { href: "/about", label: "About" },
+    { href: "/guides", label: "Guides" },
+    { href: "/faq", label: "FAQ" },
+    { href: "/docs", label: "MCP tools" },
+  ],
+} as const;

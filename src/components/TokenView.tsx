@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CopyButton, TokenMedia } from "./TokenMedia";
+import { Hint } from "./InfoBits";
 import { PriceChart } from "./PriceChart";
 import { useWallet } from "./WalletProvider";
 import { CHAIN, explorerAddress, explorerToken, shortAddress } from "@/lib/chain";
@@ -223,7 +224,9 @@ export function TokenView({ address }: { address: string }) {
           </div>
           <dl className="grid min-w-[12rem] grid-cols-2 gap-3 sm:text-right">
             <div>
-              <dt className="kicker">Price</dt>
+              <dt className="kicker">
+                Price
+              </dt>
               <dd className="font-mono text-lg text-ivory">{usd(t.priceUsd ?? analytics?.priceUsd)}</dd>
             </div>
             <div>
@@ -238,18 +241,23 @@ export function TokenView({ address }: { address: string }) {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          ["Liquidity", usd(t.liquidity ?? analytics?.liquidityUsd)],
-          ["Volume 24h", usd(t.volume24h ?? analytics?.volume)],
-          ["Buys / sells", `${analytics?.buys ?? activity?.buys ?? "—"} / ${analytics?.sells ?? activity?.sells ?? "—"}`],
-          ["Change", analytics?.changePct != null ? `${Number(analytics.changePct).toFixed(2)}%` : "—"],
-          ["Supply", t.totalSupply != null ? String(t.totalSupply) : onchain.totalSupply != null ? String(onchain.totalSupply) : "—"],
-          ["Decimals", t.decimals != null ? String(t.decimals) : onchain.decimals != null ? String(onchain.decimals) : "—"],
-          ["Score", token?.score && typeof token.score === "object" ? String((token.score as AnyRec).total ?? "—") : "—"],
-          ["Risk", flags.unverifiedLookalike ? "lookalike flag" : flags.tickerCollision ? "ticker collision" : t.canonicalStock ? "canonical" : "unscored extras"],
-        ].map(([k, v]) => (
-          <div key={k} className="panel rounded-xl p-4">
-            <p className="kicker">{k}</p>
+        {(
+          [
+            ["Liquidity", usd(t.liquidity ?? analytics?.liquidityUsd), "liquidity"],
+            ["Volume 24h", usd(t.volume24h ?? analytics?.volume), "volume"],
+            ["Buys / sells", `${analytics?.buys ?? activity?.buys ?? "—"} / ${analytics?.sells ?? activity?.sells ?? "—"}`, "ratio"],
+            ["Change", analytics?.changePct != null ? `${Number(analytics.changePct).toFixed(2)}%` : "—", ""],
+            ["Supply", t.totalSupply != null ? String(t.totalSupply) : onchain.totalSupply != null ? String(onchain.totalSupply) : "—", "mcap"],
+            ["Decimals", t.decimals != null ? String(t.decimals) : onchain.decimals != null ? String(onchain.decimals) : "—", ""],
+            ["Score", token?.score && typeof token.score === "object" ? String((token.score as AnyRec).total ?? "—") : "—", "risk"],
+            ["Risk", flags.unverifiedLookalike ? "lookalike flag" : flags.tickerCollision ? "ticker collision" : t.canonicalStock ? "canonical" : "unscored extras", "risk"],
+          ] as Array<[string, string, keyof typeof import("@/lib/copy").GLOSSARY | ""]>
+        ).map(([k, v, hint]) => (
+          <div key={k} className="panel p-4">
+            <p className="kicker">
+              {k}
+              {hint ? <Hint id={hint} /> : null}
+            </p>
             <p className="mt-2 break-all font-mono text-sm text-ivory">{v}</p>
           </div>
         ))}
@@ -275,8 +283,10 @@ export function TokenView({ address }: { address: string }) {
       </section>
 
       {position ? (
-        <section className="panel rounded-xl p-5">
-          <h3 className="font-heading text-xl text-ivory">Your position</h3>
+        <section className="panel p-5">
+          <h3 className="font-heading text-xl text-ivory">
+            Your position <Hint id="pnl" />
+          </h3>
           <p className="mt-2 font-mono text-sm text-ivory">
             {String(position.formatted)} {String(position.symbol || t.symbol || "")} · mark {usd(position.usd)}
           </p>
@@ -285,15 +295,19 @@ export function TokenView({ address }: { address: string }) {
           </p>
         </section>
       ) : wallet ? (
-        <section className="panel rounded-xl p-5">
-          <h3 className="font-heading text-xl text-ivory">Your position</h3>
+        <section className="panel p-5">
+          <h3 className="font-heading text-xl text-ivory">
+            Your position <Hint id="pnl" />
+          </h3>
           <p className="mt-2 text-sm text-ivory/75">Connected wallet has no watched balance in this token.</p>
         </section>
       ) : null}
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="panel rounded-xl p-5">
-          <h3 className="font-heading text-xl text-ivory">Holders (proxy)</h3>
+          <h3 className="font-heading text-xl text-ivory">
+            Holders (proxy) <Hint id="holders" />
+          </h3>
           <p className="mt-1 text-xs text-ivory/70">
             {holders?.holderCountProxy != null ? `${holders.holderCountProxy} wallets in sample` : "No holder sample"}
             {holders?.concentrationTop10 != null ? ` · top 10 ${Number(holders.concentrationTop10).toFixed(1)}% of sample` : ""}
@@ -314,7 +328,9 @@ export function TokenView({ address }: { address: string }) {
           </ul>
         </div>
         <div className="panel rounded-xl p-5">
-          <h3 className="font-heading text-xl text-ivory">Creator / fees</h3>
+          <h3 className="font-heading text-xl text-ivory">
+            Creator / fees <Hint id="fees" />
+          </h3>
           {pons ? (
             <dl className="mt-3 space-y-2 text-sm text-ivory/80">
               <div className="flex justify-between gap-3">
@@ -391,7 +407,9 @@ export function TokenView({ address }: { address: string }) {
           </ul>
         </div>
         <div className="panel rounded-xl p-5">
-          <h3 className="font-heading text-xl text-ivory">Burns</h3>
+          <h3 className="font-heading text-xl text-ivory">
+            Burns <Hint id="burns" />
+          </h3>
           <p className="mt-1 font-mono text-xs text-ivory/70">
             Sample burned {activity?.burnedAmount != null ? Number(activity.burnedAmount).toPrecision(6) : "—"} · {usd(activity?.burnedUsd)}
           </p>
