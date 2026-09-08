@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import { HubChrome } from "./HubChrome";
 import { DOCS_GROUPS, DOCS_NAV, DISCLAIMER, docsSearchIndex } from "@/lib/docs";
 
 export function DocsSearch() {
@@ -115,6 +116,11 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
                   </Link>
                 </li>
                 <li>
+                  <Link href="/developer-terms" className="block rounded-lg px-2 py-1.5 hover:text-ivory">
+                    Developer terms
+                  </Link>
+                </li>
+                <li>
                   <Link href="/privacy" className="block rounded-lg px-2 py-1.5 hover:text-ivory">
                     Privacy
                   </Link>
@@ -134,6 +140,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
         <div className="min-w-0 space-y-6">
+          <HubChrome />
           {children}
           <p className="text-[11px] leading-relaxed text-ivory/55">{DISCLAIMER}</p>
         </div>

@@ -1,23 +1,26 @@
 import { CopyButton } from "@/components/TokenMedia";
 import { AccessPlans } from "@/components/AccessPlans";
+import { AccessLedger } from "@/components/AccessLedger";
 import { ACCESS_AUDIENCE, MCP_ACCESS } from "@/lib/access";
 import { CANONICAL_MCP, LEGAL } from "@/lib/site";
 import Link from "next/link";
 
 export const metadata = {
   title: "MCP access",
-  description: "Apogee MCP is public (auth none). A $ORBITX burn-gated access model is documented as intent, not a live shop.",
+  description:
+    "Apogee MCP is public (auth none). Official USD list prices and a 25% $ORBITX buy-and-burn allocation are published. Checkout is not live until an on-chain verifier exists.",
 };
 
 export default function AccessPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <header>
-        <p className="kicker">Infrastructure</p>
+        <p className="kicker">Infrastructure marketplace</p>
         <h1 className="mt-2 font-display text-4xl text-ivory sm:text-5xl">Apogee MCP for other products</h1>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ivory/80 sm:text-base">
           You do not need users to visit Apogee. Connect {CANONICAL_MCP} (auth none) and bring search, desk, charts,
-          wallet marks, and listed tools into your own agent, trading UI, or research app.
+          wallet marks, and listed tools into your own agent, trading UI, or research app. The shop below is the official
+          catalog if paid access ships — it is not a live checkout.
         </p>
       </header>
 
@@ -31,13 +34,21 @@ export default function AccessPage() {
       </ol>
 
       <AccessPlans />
+      <AccessLedger />
+
+      <section id="receipts" className="panel rounded-xl p-5">
+        <p className="kicker">Receipts</p>
+        <p className="mt-2 text-sm text-ivory/75">
+          After a verified purchase, a receipt would list plan, price, access window, 25% buy-and-burn allocation, and
+          an on-chain transaction link. There are no receipts until a payment is confirmed by the backend.
+        </p>
+      </section>
 
       <section id="token" className="panel rounded-xl p-5">
         <p className="kicker">Project contract</p>
         <p className="mt-2 break-all font-mono text-sm text-ivory">{MCP_ACCESS.projectContract}</p>
         <p className="mt-2 text-xs text-ivory/65">
-          Copy only. This site does not invent an explorer or claim a verified on-chain burn for {MCP_ACCESS.tokenTicker}
-          .
+          Copy only. This site does not invent an explorer or claim a verified on-chain burn for {MCP_ACCESS.tokenTicker}.
         </p>
         <div className="mt-3">
           <CopyButton value={MCP_ACCESS.projectContract} label="Copy address" />
@@ -49,7 +60,11 @@ export default function AccessPage() {
         <Link href="/developers/auth" className="text-ember hover:text-ivory">
           Authentication
         </Link>{" "}
-        remains none until a verified gating path exists.
+        remains none until a verified gating path exists.{" "}
+        <Link href="/developer-terms" className="text-ember hover:text-ivory">
+          Developer terms
+        </Link>
+        .
       </p>
     </div>
   );

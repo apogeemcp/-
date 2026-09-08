@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { stringToHex } from "viem";
 import { CHAIN } from "@/lib/chain";
 import { assertLaunchTx } from "@/lib/txguard";
 
@@ -23,14 +24,26 @@ function getProvider(): EthereumProvider | null {
   return phantom || w.ethereum || null;
 }
 
+function solanaDetected(): boolean {
+  if (typeof window === "undefined") return false;
+  const w = window as unknown as { phantom?: { solana?: { isPhantom?: boolean } } };
+  return Boolean(w.phantom?.solana?.isPhantom);
+}
+
 type WalletState = {
   address: string | null;
   chainId: string | null;
   connecting: boolean;
   error: string | null;
-  connect: () => Promise<void>;
+  verified: boolean;
+  verifying: boolean;
+  solanaAdapter: boolean;
+  connect: () => Promise<string | null>;
   addChain: () => Promise<void>;
   signLaunch: (tx: { to: string; data: string; value: string; chainId?: string }) => Promise<string>;
+  signMessage: (message: string) => Promise<string>;
+  verifyOwnership: () => Promise<boolean>;
+  logoutSession: () => Promise<void>;
 };
 
 const Ctx = createContext<WalletState | null>(null);
@@ -40,13 +53,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [chainId, setChainId] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verified, setVerified] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [solanaAdapter, setSolanaAdapter] = useState(false);
 
   useEffect(() => {
+    setSolanaAdapter(solanaDetected());
     const provider = getProvider();
     if (!provider?.on) return;
     const onAccounts = (...a: unknown[]) => {
       const accs = a[0] as string[] | undefined;
       setAddress(accs?.[0] || null);
+      setVerified(false);
     };
     const onChain = (...a: unknown[]) => setChainId(String(a[0] || ""));
     provider.on("accountsChanged", onAccounts);
@@ -56,6 +74,19 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       provider.removeListener?.("chainChanged", onChain);
     };
   }, []);
+
+  useEffect(() => {
+    if (!address) {
+      setVerified(false);
+      return;
+    }
+    fetch("/api/session")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.verified && String(j.address || "").toLowerCase() === address.toLowerCase()) setVerified(true);
+      })
+      .catch(() => {});
+  }, [address]);
 
   const addChain = useCallback(async () => {
     const provider = getProvider();
@@ -91,11 +122,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       if (!provider) throw new Error("Phantom not found. Open this page in a browser with Phantom, then use Ethereum mode.");
       await addChain();
       const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
-      setAddress(accounts[0] || null);
+      const next = accounts[0] || null;
+      setAddress(next);
       const id = (await provider.request({ method: "eth_chainId" })) as string;
       setChainId(id);
+      return next;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      return null;
     } finally {
       setConnecting(false);
     }
@@ -118,9 +152,87 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     [address, addChain],
   );
 
+  const signMessage = useCallback(
+    async (message: string) => {
+      const provider = getProvider();
+      if (!provider || !address) throw new Error("Connect Phantom first.");
+      try {
+        return String(await provider.request({ method: "personal_sign", params: [stringToHex(message), address] }));
+      } catch {
+        return String(await provider.request({ method: "personal_sign", params: [message, address] }));
+      }
+    },
+    [address],
+  );
+
+  const verifyOwnership = useCallback(async () => {
+    if (!address) throw new Error("Connect Phantom first.");
+    setVerifying(true);
+    setError(null);
+    try {
+      const nonceRes = await fetch(`/api/session/nonce?address=${encodeURIComponent(address)}`);
+      const nonceJson = await nonceRes.json();
+      if (!nonceRes.ok) throw new Error(nonceJson.error || "Could not issue a nonce.");
+      const signature = await signMessage(String(nonceJson.message));
+      const verifyRes = await fetch("/api/session/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          address,
+          message: nonceJson.message,
+          signature,
+          nonce: nonceJson.nonce,
+        }),
+      });
+      const verifyJson = await verifyRes.json();
+      if (!verifyRes.ok) throw new Error(verifyJson.error || "Signature was rejected.");
+      setVerified(true);
+      return true;
+    } catch (e) {
+      setVerified(false);
+      setError(e instanceof Error ? e.message : String(e));
+      return false;
+    } finally {
+      setVerifying(false);
+    }
+  }, [address, signMessage]);
+
+  const logoutSession = useCallback(async () => {
+    await fetch("/api/session/logout", { method: "POST" }).catch(() => {});
+    setVerified(false);
+  }, []);
+
   const value = useMemo(
-    () => ({ address, chainId, connecting, error, connect, addChain, signLaunch }),
-    [address, chainId, connecting, error, connect, addChain, signLaunch],
+    () => ({
+      address,
+      chainId,
+      connecting,
+      error,
+      verified,
+      verifying,
+      solanaAdapter,
+      connect,
+      addChain,
+      signLaunch,
+      signMessage,
+      verifyOwnership,
+      logoutSession,
+    }),
+    [
+      address,
+      chainId,
+      connecting,
+      error,
+      verified,
+      verifying,
+      solanaAdapter,
+      connect,
+      addChain,
+      signLaunch,
+      signMessage,
+      verifyOwnership,
+      logoutSession,
+    ],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

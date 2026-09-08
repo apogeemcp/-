@@ -8,7 +8,18 @@ export function generateStaticParams() {
 
 export default async function DeveloperSlugPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  if (slug === "tools" || slug === "status" || slug === "access" || slug === "partners") notFound();
+  if (
+    slug === "tools" ||
+    slug === "status" ||
+    slug === "access" ||
+    slug === "partners" ||
+    slug === "usage" ||
+    slug === "profile" ||
+    slug === "support" ||
+    slug === "admin" ||
+    slug === "history"
+  )
+    notFound();
   const page = developerPage(slug);
   if (!page) notFound();
   return <DocsArticle kicker={page.kicker} title={page.title} lede={page.lede} body={page.body} />;

@@ -26,26 +26,37 @@ export function UsagePanel() {
     return <p className="text-sm text-ivory/75">No usage rows yet. Numbers appear after live MCP/API traffic is logged.</p>;
   }
   return (
-    <div className="overflow-x-auto">
+    <div>
       <p className="mb-3 text-xs text-ivory/65">Source: {data.source}. Counts are real telemetry, not placeholders.</p>
-      <table className="w-full min-w-[28rem] text-left text-sm">
-        <thead>
-          <tr className="border-b border-white/15 text-ivory/70">
-            <th className="py-2 font-medium">Tool</th>
-            <th className="py-2 font-medium">Calls</th>
-            <th className="py-2 font-medium">Last seen</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.rows.map((row) => (
-            <tr key={row.tool} className="border-b border-white/10">
-              <td className="py-2 font-mono text-gold">{row.tool}</td>
-              <td className="py-2 font-mono text-ivory">{row.calls}</td>
-              <td className="py-2 text-ivory/80">{row.last_seen ? new Date(row.last_seen).toLocaleString() : "—"}</td>
+      <ul className="space-y-2 sm:hidden">
+        {data.rows.map((row) => (
+          <li key={row.tool} className="rounded-xl border border-white/10 bg-black/30 p-3">
+            <p className="font-mono text-gold">{row.tool}</p>
+            <p className="mt-1 text-sm text-ivory">{row.calls} calls</p>
+            <p className="text-xs text-ivory/60">{row.last_seen ? new Date(row.last_seen).toLocaleString() : "—"}</p>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden overflow-x-auto sm:block">
+        <table className="w-full min-w-[28rem] text-left text-sm">
+          <thead>
+            <tr className="border-b border-white/15 text-ivory/70">
+              <th className="py-2 font-medium">Tool</th>
+              <th className="py-2 font-medium">Calls</th>
+              <th className="py-2 font-medium">Last seen</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.rows.map((row) => (
+              <tr key={row.tool} className="border-b border-white/10">
+                <td className="py-2 font-mono text-gold">{row.tool}</td>
+                <td className="py-2 font-mono text-ivory">{row.calls}</td>
+                <td className="py-2 text-ivory/80">{row.last_seen ? new Date(row.last_seen).toLocaleString() : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

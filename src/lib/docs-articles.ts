@@ -367,7 +367,7 @@ print(len(tools), scan["structuredContent"] if isinstance(scan, dict) else scan)
       lede: "The live Apogee MCP and REST APIs currently use auth: none. There is no API key console, OAuth issuer, or credential revocation UI.",
       body: [
         { type: "p", text: "Clients authenticate by opening HTTPS to the public URL. Discovery documents and GET /api/mcp set auth to \"none\". CORS allows authorization and x-api-key so generic hosts can send headers; the server does not validate them." },
-        { type: "p", text: "A $ORBITX rental or permanent burn gate is documented as product intent on /developers/access. It is not implemented. APOGEE_MCP_GATING is off. Do not pay anyone selling Apogee MCP API keys — there are none." },
+        { type: "p", text: "Official USD plans (1 day $100, 3 days $250, 1 week $500, 1 month $2,500, lifetime $5,000) and a 25% $ORBITX buy-and-burn split are published on /developers/access. APOGEE_MCP_GATING is off. Checkout cannot complete until a treasury and on-chain verifier exist. Do not pay anyone selling Apogee MCP API keys — there are none." },
         { type: "h2", text: "How credentials are created" },
         { type: "p", text: "They are not. There is no create-key flow in this repository." },
         { type: "h2", text: "Lifetime, storage, revocation, scopes" },

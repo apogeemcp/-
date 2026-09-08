@@ -141,7 +141,7 @@ export const FAQ = [
       },
       {
         q: "Do I need $ORBITX to use MCP?",
-        a: "No. Live MCP is auth none. /developers/access describes an intended $ORBITX rental/permanent burn model. It is not enabled; there is no checkout and no burn counter.",
+        a: "No. Live MCP is auth none. /developers/access publishes official USD list prices and a 25% $ORBITX buy-and-burn allocation. Checkout and burns are not live; the shop will not confirm a purchase or show a burn total without a verified on-chain signature.",
       },
       {
         q: "Can I embed Apogee in my own product?",

@@ -52,7 +52,13 @@ describe("developer portal", () => {
     expect(COMMUNITY.github).toBe("https://github.com/apogeemcp/-");
     expect(LEGAL.disclaimer.toLowerCase()).toContain("financial");
     expect(LEGAL.counsel.toLowerCase()).toContain("not legal advice");
-    expect(FOOTER.legal.map((l) => l.href)).toEqual(["/terms", "/privacy", "/data-usage", "/availability"]);
+    expect(FOOTER.legal.map((l) => l.href)).toEqual([
+      "/terms",
+      "/developer-terms",
+      "/privacy",
+      "/data-usage",
+      "/availability",
+    ]);
   });
 });
 

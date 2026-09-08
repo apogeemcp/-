@@ -9,7 +9,7 @@ export function siteSearchIndex(): SiteHit[] {
     ...MORE_LINKS.map((l) => ({ title: l.label, href: l.href, section: "More", text: l.label })),
     ...FOOTER.legal.map((l) => ({ title: l.label, href: l.href, section: "Legal", text: l.label })),
     { title: "MCP tools", href: "/docs", section: "Developers", text: "scan_token get_desk prepare_pons_launch catalog" },
-    { title: "MCP access", href: "/developers/access", section: "Developers", text: "auth none orbitx rental permanent" },
+    { title: "MCP access", href: "/developers/access", section: "Developers", text: "auth none orbitx rental lifetime buy burn" },
     { title: "Partners", href: "/developers/partners", section: "Developers", text: "partnership integrate mcp" },
     { title: "Wallet / Profile", href: "/wallet", section: "App", text: "phantom track pnl holdings" },
     { title: "Install PWA", href: "/connect", section: "App", text: "install home screen pwa" },

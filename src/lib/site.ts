@@ -202,6 +202,7 @@ export const FOOTER = {
   ],
   legal: [
     { href: "/terms", label: "Terms" },
+    { href: "/developer-terms", label: "Developer terms" },
     { href: "/privacy", label: "Privacy" },
     { href: "/data-usage", label: "Data usage" },
     { href: "/availability", label: "Availability" },
