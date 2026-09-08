@@ -43,6 +43,12 @@ export function Nav() {
               {mcp.replace("https://", "")}
             </Link>
             <InstallApp compact />
+            <Link
+              href="/developers"
+              className="hidden rounded-full border border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-ivory/80 hover:text-ivory sm:inline"
+            >
+              Developers
+            </Link>
             <div className="relative" ref={menu}>
               <button
                 type="button"
@@ -56,7 +62,7 @@ export function Nav() {
               {open ? (
                 <div
                   role="menu"
-                  className="glass-3 absolute right-0 top-10 z-50 w-56 overflow-hidden py-1"
+                  className="glass-3 absolute right-0 top-10 z-50 max-h-[min(70vh,28rem)] w-56 overflow-y-auto py-1"
                 >
                   {MORE_LINKS.map((l) => (
                     <Link
