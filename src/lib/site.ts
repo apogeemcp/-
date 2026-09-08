@@ -141,6 +141,10 @@ export const LEGAL = {
     "Never paste a seed phrase or private key. Wallet connect uses Phantom (or any EIP-1193 provider) locally. prepare_pons_launch returns an unsigned transaction — you sign it. Apogee does not broadcast unless you sign. Most tools are read-only; launch helpers are not.",
   data:
     "Market data comes from public RPC, DexScreener, GeckoTerminal, DefiLlama, RHJ Stock Token APIs, and on-chain pons reads. It can be delayed, incomplete, or wrong. Tickers collide — resolve by contract.",
+  disclaimer:
+    "Apogee provides software, data and developer infrastructure. Blockchain and market data can be incomplete, delayed or inaccurate. AI-generated output may contain errors. Nothing on the platform should be interpreted as financial, legal or investment advice.",
+  counsel:
+    "Legal pages describe how the software is offered. They are not legal advice. Have qualified counsel review them before treating them as a binding contract.",
   mcp: CANONICAL_MCP,
   alias: CANONICAL_MCP_ALIAS,
 };
@@ -154,11 +158,13 @@ export const TABS = [
 ] as const;
 
 export const MORE_LINKS = [
+  { href: "/developers", label: "Developers" },
   { href: "/connect", label: "Connect MCP" },
   { href: "/analytics", label: "Analytics" },
   { href: "/about", label: "About" },
   { href: "/guides", label: "Guides" },
   { href: "/faq", label: "FAQ" },
+  { href: "/whitepaper", label: "Whitepaper" },
   { href: "/docs", label: "MCP tools" },
   { href: "/links", label: "Links" },
   { href: "/usage", label: "Usage" },
@@ -170,6 +176,7 @@ export const COMMUNITY = {
   telegram: "https://t.me/orbitxwrld",
   x: "https://x.com/apogeemcp",
   website: CANONICAL_ORIGIN,
+  github: "https://github.com/apogeemcp/-",
 } as const;
 
 export const PROJECT_CA = "13H4WJvGEg4xrrBwWn2vsQgz7xhmhxgNdw19i1QsxPX9";
@@ -184,9 +191,17 @@ export const FOOTER = {
     { href: "/analytics", label: "Analytics" },
   ],
   resources: [
+    { href: "/developers", label: "Developers" },
     { href: "/about", label: "About" },
     { href: "/guides", label: "Guides" },
     { href: "/faq", label: "FAQ" },
+    { href: "/whitepaper", label: "Whitepaper" },
     { href: "/docs", label: "MCP tools" },
+  ],
+  legal: [
+    { href: "/terms", label: "Terms" },
+    { href: "/privacy", label: "Privacy" },
+    { href: "/data-usage", label: "Data usage" },
+    { href: "/availability", label: "Availability" },
   ],
 } as const;

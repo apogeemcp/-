@@ -113,5 +113,6 @@ export const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers":
     "authorization, x-api-key, apikey, content-type, mcp-session-id, mcp-protocol-version",
   "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-  "Access-Control-Expose-Headers": "mcp-session-id, mcp-protocol-version",
+  "Access-Control-Expose-Headers":
+    "mcp-session-id, mcp-protocol-version, RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After",
 };

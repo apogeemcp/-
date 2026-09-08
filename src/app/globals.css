@@ -98,6 +98,23 @@ body {
     @apply text-[10px] uppercase tracking-[0.28em] text-ember;
   }
 
+  .arch {
+    @apply panel space-y-0 overflow-hidden rounded-xl p-0;
+  }
+
+  .arch li {
+    @apply relative border-b border-white/8 px-4 py-3 font-mono text-xs text-ivory/85 last:border-b-0;
+  }
+
+  .arch li::before {
+    content: "↓";
+    @apply mr-3 text-ember;
+  }
+
+  .arch li:last-child::before {
+    content: "→";
+  }
+
   .field {
     @apply w-full rounded-full border border-white/15 bg-black/50 px-4 py-2.5 text-sm text-ivory outline-none placeholder:text-ivory/45 transition;
     min-height: 44px;

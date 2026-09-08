@@ -69,15 +69,19 @@ describe("coordinated copy", () => {
     expect(LEGAL.pons).toMatch(/pons/);
     expect(LEGAL.keys).toMatch(/unsigned/);
     expect(LEGAL.keys.toLowerCase()).not.toContain("all tools are read-only");
+    expect(LEGAL.disclaimer.toLowerCase()).toContain("investment advice");
+    expect(LEGAL.counsel.toLowerCase()).toContain("counsel");
     expect(LEGAL.stock).toMatch(/United States/);
     expect(TABS.map((t) => t.href)).toEqual(["/", "/dashboard", "/launches", "/orbit", "/wallet"]);
     expect(TABS.map((t) => t.label)).toEqual(["Home", "Desk", "Launch", "Orbit", "Profile"]);
     expect(MORE_LINKS.map((l) => l.href)).toEqual([
+      "/developers",
       "/connect",
       "/analytics",
       "/about",
       "/guides",
       "/faq",
+      "/whitepaper",
       "/docs",
       "/links",
       "/usage",
@@ -87,6 +91,7 @@ describe("coordinated copy", () => {
     expect(asset("/brand/banner.webp")).toBe(`/brand/banner.webp?v=${ASSET_V}`);
     expect(COMMUNITY.telegram).toBe("https://t.me/orbitxwrld");
     expect(COMMUNITY.x).toBe("https://x.com/apogeemcp");
+    expect(COMMUNITY.github).toBe("https://github.com/apogeemcp/-");
     expect(PROJECT_CA).toMatch(/^13H4/);
     expect(MCP_INSTRUCTIONS).toContain("3000");
     expect(MCP_INSTRUCTIONS).toContain("unsigned");

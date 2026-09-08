@@ -51,6 +51,16 @@ export function Footer() {
                 </Link>
               </li>
             </ul>
+            <p className="kicker mt-5">Legal</p>
+            <ul className="mt-3 space-y-2 text-sm text-ivory/80">
+              {FOOTER.legal.map((t) => (
+                <li key={t.href}>
+                  <Link href={t.href} className="hover:text-ember">
+                    {t.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
           <div>
             <p className="kicker">Community</p>
@@ -66,8 +76,8 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href={COMMUNITY.website} className="hover:text-ember">
-                  Website
+                <a href={COMMUNITY.github} target="_blank" rel="noreferrer" className="hover:text-ember">
+                  GitHub
                 </a>
               </li>
             </ul>
@@ -87,7 +97,7 @@ export function Footer() {
             {CHAIN.name} {CHAIN.id} · {PRODUCT.toolCount} ops · v{PRODUCT.version}
           </p>
           <p>{LEGAL.stock}</p>
-          <p>{LEGAL.keys}</p>
+          <p>{LEGAL.disclaimer}</p>
           <p>
             © {new Date().getFullYear()} {PRODUCT.name} · {LEGAL.updated}
           </p>

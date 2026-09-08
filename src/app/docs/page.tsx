@@ -16,7 +16,10 @@ export default function DocsPage() {
         lede={`${http} · ${PRODUCT.toolCount} catalog operations. Last updated ${LEGAL.updated}. Generated from the live tool list — no invented tools.`}
       />
       <PageFrame>
-        <GuidePanel title={GUIDES.mcp.title} body={GUIDES.mcp.body} href="/connect" />
+        <GuidePanel title={GUIDES.mcp.title} body={GUIDES.mcp.body} href="/developers/quickstart" />
+        <p className="text-sm text-ivory/75">
+          Full developer portal: schemas, auth, errors, and security live at <a className="text-ember" href="/developers">/developers</a>.
+        </p>
         <pre className="panel whitespace-pre-wrap rounded-xl p-5 font-mono text-[11px] leading-relaxed text-ivory/75">
           {MCP_INSTRUCTIONS}
         </pre>

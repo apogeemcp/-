@@ -56,7 +56,7 @@ export function Nav() {
               {open ? (
                 <div
                   role="menu"
-                  className="glass-3 absolute right-0 top-10 z-50 w-52 overflow-hidden py-1"
+                  className="glass-3 absolute right-0 top-10 z-50 w-56 overflow-hidden py-1"
                 >
                   {MORE_LINKS.map((l) => (
                     <Link

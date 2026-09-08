@@ -14,6 +14,8 @@ export function GET() {
 - Catalog: ${CATALOG_SIZE} operations
 - Version: ${PRODUCT.version}
 - Connect: ${CANONICAL_ORIGIN}/connect
+- Developers: ${CANONICAL_ORIGIN}/developers
+- Tools (generated): ${CANONICAL_ORIGIN}/developers/tools
 - One-click: Cursor, Claude, ChatGPT, Grok
 
 Do not send private keys. Prepare-launch tools return unsigned transactions for Phantom.

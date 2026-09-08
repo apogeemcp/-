@@ -3,6 +3,7 @@ import { corsHeaders } from "@/lib/mcp";
 import { dispatchTool } from "@/lib/dispatch";
 import { TOOLS } from "@/lib/tools";
 import { CATALOG_SIZE } from "@/lib/catalog";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +19,20 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const limited = checkRateLimit(req);
+  if (!limited.ok) {
+    const res = limited.response;
+    Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+    return res;
+  }
   const body = (await req.json().catch(() => ({}))) as { tool?: string; arguments?: Record<string, unknown> };
   try {
     const result = await dispatchTool(String(body.tool || ""), body.arguments || {});
-    return NextResponse.json({ ok: true, tool: body.tool, result }, { headers: corsHeaders });
+    return NextResponse.json({ ok: true, tool: body.tool, result }, { headers: { ...corsHeaders, ...limited.headers } });
   } catch (error) {
     return NextResponse.json(
       { ok: false, error: error instanceof Error ? error.message : String(error) },
-      { status: 404, headers: corsHeaders },
+      { status: 404, headers: { ...corsHeaders, ...limited.headers } },
     );
   }
 }

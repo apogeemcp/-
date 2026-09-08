@@ -133,7 +133,7 @@ export const FAQ = [
       },
       {
         q: "What tools are available?",
-        a: `${PRODUCT.toolCount} catalog operations. The listed set (search_token, scan_token, get_desk, list_pons_launches, track_wallet, …) is on /docs. Aliases like scan_NVDA go through search_catalog / run_tool.`,
+        a: `${PRODUCT.toolCount} catalog operations. Listed tools with schemas: /developers/tools (generated from source). Aliases like scan_NVDA go through search_catalog / run_tool.`,
       },
       {
         q: "How does MCP interact with the site?",

@@ -74,6 +74,9 @@ export default function HomePage() {
             <Link href="/guides" className="btn-ghost">
               Guides
             </Link>
+            <Link href="/developers" className="btn-ghost">
+              Developers
+            </Link>
             <Link href="/docs" className="btn-ghost">
               MCP tools
             </Link>
