@@ -31,7 +31,7 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-50">
       <div className="border-b border-white/[0.06] bg-[#080706]/92 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6">
           <BrandMark size={32} />
           <div className="flex min-w-0 items-center gap-2">
             <Link

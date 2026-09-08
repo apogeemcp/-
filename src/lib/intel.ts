@@ -8,6 +8,8 @@ import {
   getBlockTool,
   getContractMeta,
   getFirstBuyers,
+  getHolderProxy,
+  getTokenActivity,
   getGasOracle,
   getMarketOverview,
   getSmartMoney,
@@ -22,6 +24,7 @@ import {
 import { getCurveQuote, getMcpInfo, preparePonsBuy, preparePonsLaunch, previewPonsLaunch } from "./launch";
 import { CATALOG_SIZE } from "./catalog";
 import { mcpHttpUrl } from "./site";
+import { mediaUrl } from "./media";
 
 export type DsPair = {
   chainId?: string;
@@ -305,7 +308,7 @@ export async function scanToken(query: string) {
             address: ponsOnly.token,
             name: ponsOnly.meta?.name,
             symbol: ponsOnly.meta?.symbol,
-            image: ponsOnly.meta?.logo || null,
+            image: mediaUrl(ponsOnly.meta?.logo || null),
             priceUsd: ponsOnly.priceUsd ?? null,
             mcap: ponsOnly.marketCapUsd ?? null,
             liquidity: null,
@@ -362,7 +365,7 @@ export async function scanToken(query: string) {
       address,
       name: best.baseToken?.name,
       symbol,
-      image: best.info?.imageUrl || canonical?.logoUrl || null,
+      image: mediaUrl(best.info?.imageUrl || canonical?.logoUrl || ponsHit?.meta?.logo || null),
       priceUsd: dexPrice,
       mcap,
       fdv: best.fdv ?? null,
@@ -629,7 +632,7 @@ export const toolImpl = {
   scan_token: (args: Record<string, unknown>) => scanToken(String(args.query || args.address || args.mint || "")),
   get_token: (args: Record<string, unknown>) => getToken(String(args.address || args.query || "")),
   get_chart: (args: Record<string, unknown>) =>
-    getChart(String(args.query || args.pool || args.address || ""), String(args.timeframe || "minute"), Number(args.aggregate || 5)),
+    getChart(String(args.query || args.pool || args.address || ""), String(args.timeframe || "minute"), Number(args.aggregate || 5) || 5),
   get_desk: () => getDesk(),
   list_trending: (args: Record<string, unknown>) => trendingPools(String(args.duration || "1h")),
   list_launches: async (args: Record<string, unknown>) => {
@@ -660,17 +663,9 @@ export const toolImpl = {
     return q ? all.filter((a) => a.tokenSymbol.toLowerCase().includes(q) || a.tokenName.toLowerCase().includes(q)) : all;
   },
   get_stock_quote: (args: Record<string, unknown>) => getStockQuoteTool(String(args.symbol || args.ticker || "")),
-  get_holders: async (args: Record<string, unknown>) => {
-    const address = String(args.address || "");
-    if (!isAddress(address)) return { ok: false, error: "Provide a token address." };
-    const pairs = await tokenPairs(address);
-    return {
-      ok: true,
-      address,
-      note: "Blockscout holder APIs are Cloudflare-gated. Liquidity and market share below are from DexScreener pools.",
-      markets: pairs.slice(0, 8).map(tokenFromPair),
-    };
-  },
+  get_holders: (args: Record<string, unknown>) => getHolderProxy(String(args.address || args.query || "")),
+  get_token_activity: (args: Record<string, unknown>) =>
+    getTokenActivity(String(args.query || args.address || args.token || "")),
   get_wallet: (args: Record<string, unknown>) => getWallet(String(args.address || "")),
   get_chain_stats: () => getChainStats(),
   get_transaction: (args: Record<string, unknown>) => getTransaction(String(args.hash || args.tx || "")),

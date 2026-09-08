@@ -3,54 +3,56 @@
 @tailwind utilities;
 
 :root {
-  --void: #050505;
+  --void: #07070a;
   --gold: #d4af37;
   --ember: #ff6b1a;
-  --flare: #ff3b1a;
+  --flare: #ff5a4a;
+  --ivory: #f4f0e6;
+  --muted: #c9c0b0;
   color-scheme: dark;
 }
 
 html,
 body {
-  background: #050505;
-  color: #f6f1e4;
+  background: #07070a;
+  color: #f4f0e6;
   min-height: 100%;
 }
 
 body {
   background-image:
-    radial-gradient(900px 480px at 92% -18%, rgba(212, 175, 55, 0.06), transparent 52%),
-    radial-gradient(680px 380px at -8% 108%, rgba(255, 59, 26, 0.045), transparent 46%);
+    radial-gradient(900px 480px at 92% -18%, rgba(212, 175, 55, 0.07), transparent 52%),
+    radial-gradient(680px 380px at -8% 108%, rgba(255, 59, 26, 0.05), transparent 46%);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3a3424 #050505;
+  scrollbar-color: #3a3424 #07070a;
 }
 
 ::selection {
   background: #d4af37;
-  color: #050505;
+  color: #07070a;
 }
 
 @layer components {
   .panel,
   .glass {
-    background: linear-gradient(180deg, rgba(16, 14, 12, 0.94), rgba(7, 6, 6, 0.96));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(22, 20, 18, 0.96), rgba(10, 9, 9, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
   }
 
   .kicker {
-    @apply text-[10px] uppercase tracking-[0.3em] text-gold;
+    @apply text-[10px] uppercase tracking-[0.28em] text-gold;
   }
 
   .field {
-    @apply rounded-md border border-white/10 bg-black/45 px-4 py-2.5 text-sm text-ivory outline-none placeholder:text-ivory/30 transition;
+    @apply rounded-md border border-white/15 bg-black/60 px-4 py-2.5 text-sm text-ivory outline-none placeholder:text-ivory/45 transition;
   }
 
   .field:focus {
-    border-color: rgba(212, 175, 55, 0.45);
+    border-color: rgba(212, 175, 55, 0.55);
   }
 
   .btn-gold {
@@ -58,7 +60,7 @@ body {
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-md border border-white/15 px-4 py-2.5 text-sm text-ivory transition hover:border-gold/40;
+    @apply inline-flex items-center justify-center rounded-md border border-white/20 bg-black/30 px-4 py-2.5 text-sm text-ivory transition hover:border-gold/50 hover:text-ivory;
   }
 }
 
@@ -69,7 +71,7 @@ body {
 
 input,
 textarea {
-  color: #f6f1e4;
+  color: #f4f0e6;
 }
 
 button:focus-visible,

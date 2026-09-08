@@ -105,9 +105,18 @@ export function ScanBox() {
               <p className="mt-2 text-[11px] text-ivory/40">{out.pons.graduation?.note}</p>
             </div>
           )}
-          <p className="sm:col-span-4 font-mono text-[11px] text-ivory/50">
+          <p className="sm:col-span-4 font-mono text-[11px] text-ivory/80">
             {out.token.symbol} · {out.token.address} · {out.token.canonicalStock ? "canonical stock" : "market token"} ·{" "}
             {out.token.momentumLabel}
+            {out.token.address ? (
+              <>
+                {" "}
+                ·{" "}
+                <a className="text-gold" href={`/token/${out.token.address}`}>
+                  Open terminal
+                </a>
+              </>
+            ) : null}
           </p>
         </div>
       )}

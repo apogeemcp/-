@@ -1,11 +1,23 @@
 import { catalogEntry, searchCatalog, CATALOG_SIZE, buildCatalog } from "./catalog";
 import { toolImpl } from "./intel";
 import { mcpHttpUrl, installLinks } from "./site";
+import { logUsage } from "./usage";
 
 export async function dispatchTool(name: string, args: Record<string, unknown> = {}): Promise<unknown> {
   const n = String(name || "").trim();
   if (!n) throw new Error("Missing tool name");
+  const query = String(args.query || args.address || args.symbol || args.q || "");
+  try {
+    const result = await run(n, args);
+    logUsage(n, query, result && typeof result === "object" && "ok" in result ? Boolean((result as { ok?: boolean }).ok) : true);
+    return result;
+  } catch (error) {
+    logUsage(n, query, false);
+    throw error;
+  }
+}
 
+async function run(n: string, args: Record<string, unknown>): Promise<unknown> {
   if (n === "search_catalog") {
     const hits = searchCatalog(String(args.query || args.q || ""), Number(args.limit || 40));
     return { ok: true, catalogSize: CATALOG_SIZE, matches: hits.map((t) => ({ name: t.name, description: t.description, family: t.family, impl: t.impl })) };

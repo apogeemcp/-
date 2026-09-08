@@ -69,6 +69,7 @@ describe("coordinated copy", () => {
     expect(LEGAL.keys.toLowerCase()).not.toContain("all tools are read-only");
     expect(LEGAL.stock).toMatch(/United States/);
     expect(TABS.map((t) => t.href)).toEqual(["/", "/dashboard", "/launches", "/orbit", "/wallet"]);
+    expect(TABS.map((t) => t.label)).toEqual(["Home", "Desk", "Launch", "Orbit", "Profile"]);
     expect(MORE_LINKS.map((l) => l.href)).toEqual(["/connect", "/analytics", "/docs", "/usage", "/privacy", "/terms"]);
     expect(asset("/brand/banner.png")).toBe(`/brand/banner.png?v=${ASSET_V}`);
     expect(MCP_INSTRUCTIONS).toContain("3000");

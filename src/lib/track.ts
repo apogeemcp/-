@@ -304,6 +304,103 @@ export async function getSmartMoney(query: string) {
   return { ...top, smart, note: "Wallets with repeat buys in the recent transfer window." };
 }
 
+const DEAD = new Set([
+  "0x0000000000000000000000000000000000000000",
+  "0x000000000000000000000000000000000000dead",
+  "0x0000000000000000000000000000000000000001",
+]);
+
+export async function getTokenActivity(query: string) {
+  const pairs = await (query.match(/^0x[a-fA-F0-9]{40}$/) ? tokenPairs(query) : searchDex(query));
+  const p = pairs[0];
+  const token = (p?.baseToken?.address || (query.match(/^0x[a-fA-F0-9]{40}$/) ? query : "")).toLowerCase();
+  if (!token || !isAddress(token)) return { ok: false, error: `No Robinhood Chain token for ${query}` };
+  const transfers = await explorer<ExplorerTx[]>({
+    module: "account",
+    action: "tokentx",
+    address: token,
+    sort: "desc",
+    page: "1",
+    offset: "80",
+  });
+  const pairAddrs = new Set(pairs.map((x) => (x.pairAddress || "").toLowerCase()).filter(Boolean));
+  const dec = Number(transfers?.[0]?.tokenDecimal || 18);
+  const px = pairUsd(p);
+  const rows = (transfers || []).map((t) => {
+    const from = (t.from || "").toLowerCase();
+    const to = (t.to || "").toLowerCase();
+    const amt = Number(t.value || 0) / 10 ** (Number.isFinite(dec) ? dec : 18);
+    let side: "buy" | "sell" | "burn" | "transfer" = "transfer";
+    if (DEAD.has(to)) side = "burn";
+    else if (pairAddrs.has(from)) side = "buy";
+    else if (pairAddrs.has(to)) side = "sell";
+    return {
+      side,
+      hash: t.hash,
+      from: t.from,
+      to: t.to,
+      amount: Number.isFinite(amt) ? amt : null,
+      usd: px && Number.isFinite(amt) ? amt * px : null,
+      priceUsd: px,
+      timestamp: t.timeStamp ? Number(t.timeStamp) : null,
+      explorer: t.hash ? explorerTx(t.hash) : null,
+    };
+  });
+  const burns = rows.filter((r) => r.side === "burn");
+  const burnedAmt = burns.reduce((s, r) => s + (r.amount || 0), 0);
+  return {
+    ok: true,
+    query,
+    token: p?.baseToken || { address: token },
+    pair: p?.pairAddress || null,
+    priceUsd: px,
+    trades: rows.filter((r) => r.side === "buy" || r.side === "sell"),
+    transfers: rows,
+    burns,
+    burnedAmount: burnedAmt,
+    burnedUsd: px ? burnedAmt * px : null,
+    note: "Buy/sell inferred from DexScreener pair addresses vs explorer tokentx. Burns are transfers to zero/dead. Not a full mempool feed.",
+  };
+}
+
+export async function getHolderProxy(address: string) {
+  if (!isAddress(address)) return { ok: false, error: "Provide a token address." };
+  const [pairs, activity] = await Promise.all([tokenPairs(address), getTokenActivity(address)]);
+  const balances = new Map<string, number>();
+  if (activity.ok && "transfers" in activity) {
+    for (const t of activity.transfers || []) {
+      const amt = t.amount || 0;
+      if (t.from) balances.set(t.from.toLowerCase(), (balances.get(t.from.toLowerCase()) || 0) - amt);
+      if (t.to) balances.set(t.to.toLowerCase(), (balances.get(t.to.toLowerCase()) || 0) + amt);
+    }
+  }
+  const token = address.toLowerCase();
+  const holders = [...balances.entries()]
+    .filter(([addr, bal]) => bal > 0 && addr !== token && !DEAD.has(addr))
+    .sort((a, b) => b[1] - a[1]);
+  const total = holders.reduce((s, [, b]) => s + b, 0) || 1;
+  const top = holders.slice(0, 20).map(([addr, amount]) => ({
+    address: addr,
+    amount,
+    pct: (amount / total) * 100,
+    explorer: explorerAddress(addr),
+  }));
+  return {
+    ok: true,
+    address,
+    holderCountProxy: holders.length,
+    top,
+    concentrationTop10: top.slice(0, 10).reduce((s, h) => s + h.pct, 0),
+    markets: pairs.slice(0, 8).map((p) => ({
+      pair: p.pairAddress,
+      dex: p.dexId,
+      liquidityUsd: p.liquidity?.usd ?? null,
+      priceUsd: num(p.priceUsd),
+    })),
+    note: "Holder counts are a recent-transfer net-flow proxy (Blockscout holder APIs are Cloudflare-gated). Not a complete ledger.",
+  };
+}
+
 export async function getFirstBuyers(query: string) {
   const pairs = await (query.match(/^0x[a-fA-F0-9]{40}$/) ? tokenPairs(query) : searchDex(query));
   const p = pairs[0];

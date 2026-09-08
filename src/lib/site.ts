@@ -149,8 +149,8 @@ export const TABS = [
   { href: "/", label: "Home", hint: "Orbit" },
   { href: "/dashboard", label: "Desk", hint: "Scan" },
   { href: "/launches", label: "Launch", hint: "pons" },
-  { href: "/orbit", label: "Orbit", hint: "Chat" },
-  { href: "/wallet", label: "Wallet", hint: "Track" },
+  { href: "/orbit", label: "Orbit", hint: "AI" },
+  { href: "/wallet", label: "Profile", hint: "Wallet" },
 ] as const;
 
 export const MORE_LINKS = [

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { TokenMedia } from "./TokenMedia";
 
 export type PonsLaunch = {
   generation?: "v1" | "v2";
@@ -39,18 +40,11 @@ export function LaunchGrid({ launches, compact = false }: { launches: PonsLaunch
       {launches.map((l) => (
         <a
           key={l.token}
-          href={`/dashboard?scan=${l.token}`}
+          href={`/token/${l.token}`}
           className="group rounded-xl border border-white/5 bg-black/35 p-4 hover:border-gold/40"
         >
           <div className="flex items-start gap-3">
-            {l.logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={l.logo} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-gold/30" />
-            ) : (
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/15 font-display text-gold">
-                {(l.symbol || "?").slice(0, 1)}
-              </span>
-            )}
+            <TokenMedia src={l.logo} symbol={l.symbol} name={l.name} size={40} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-ivory">
                 {l.name || l.symbol || "untitled"}{" "}

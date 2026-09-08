@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
-import { Syne, Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Fraunces, Outfit, Instrument_Sans, IBM_Plex_Mono, Kalam } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Providers } from "@/components/Providers";
 import { ASSET_V, PRODUCT, publicSiteUrl } from "@/lib/site";
 
-const syne = Syne({ subsets: ["latin"], variable: "--font-display" });
-const instrument = Instrument_Sans({ subsets: ["latin"], variable: "--font-body" });
+const display = Fraunces({ subsets: ["latin"], variable: "--font-display" });
+const heading = Outfit({ subsets: ["latin"], variable: "--font-heading" });
+const body = Instrument_Sans({ subsets: ["latin"], variable: "--font-body" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
+const script = Kalam({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-script" });
 
 const title = `${PRODUCT.name} — ${PRODUCT.tag}`;
 const description = `${PRODUCT.toolCount} Robinhood Chain tools for agents. Search, chart, desk, wallet tracking, analytics, pons launch via Phantom. Live MCP at https://apogeemcp.digital/api/mcp — add to Cursor, Claude, ChatGPT, or Grok.`;
@@ -38,7 +40,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${syne.variable} ${instrument.variable} ${mono.variable}`}>
+    <html lang="en" className={`${display.variable} ${heading.variable} ${body.variable} ${mono.variable} ${script.variable}`}>
       <body className="font-body antialiased">
         <Providers>
           <Nav />

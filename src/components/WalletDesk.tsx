@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useWallet } from "./WalletProvider";
 import { explorerAddress, explorerTx } from "@/lib/chain";
 
 export function WalletDesk() {
   const { address, connect, connecting } = useWallet();
+  const params = useSearchParams();
   const [query, setQuery] = useState("");
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,13 +29,19 @@ export function WalletDesk() {
   }
 
   useEffect(() => {
+    const fromUrl = params.get("address");
+    if (fromUrl) {
+      setQuery(fromUrl);
+      load(fromUrl);
+      return;
+    }
     if (address) {
       setQuery(address);
       load(address);
     }
-  }, [address]);
+  }, [address, params]);
 
-  const positions = (data?.positions as Array<{ symbol?: string; formatted?: string; usd?: number | null }> | undefined) || [];
+  const positions = (data?.positions as Array<{ symbol?: string; formatted?: string; usd?: number | null; token?: string }> | undefined) || [];
   const recent = (data?.recent as Array<{ hash?: string; symbol?: string; kind?: string }> | undefined) || [];
 
   return (
@@ -80,8 +88,14 @@ export function WalletDesk() {
             <ul className="mt-3 space-y-2">
               {positions.length ? (
                 positions.map((p) => (
-                  <li key={p.symbol} className="flex justify-between font-mono text-xs text-ivory/80">
-                    <span>{p.symbol}</span>
+                  <li key={p.symbol} className="flex justify-between font-mono text-xs text-ivory">
+                    {p.token ? (
+                      <a className="text-gold hover:underline" href={`/token/${p.token}`}>
+                        {p.symbol}
+                      </a>
+                    ) : (
+                      <span>{p.symbol}</span>
+                    )}
                     <span>
                       {p.formatted} {p.usd != null ? `· $${p.usd.toFixed(2)}` : ""}
                     </span>

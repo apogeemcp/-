@@ -134,11 +134,20 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "get_holders",
-    description: "Market/holder proxy for a token via pool liquidity share when explorer holder APIs are gated.",
+    description: "Holder concentration proxy from recent explorer transfers plus DexScreener pool liquidity. Not a full ledger.",
     inputSchema: {
       type: "object",
       properties: { address: { type: "string" } },
       required: ["address"],
+    },
+  },
+  {
+    name: "get_token_activity",
+    description: "Recent buy/sell/burn transfers for a Robinhood Chain token from Blockscout tokentx plus DexScreener pairs.",
+    inputSchema: {
+      type: "object",
+      properties: { query: { type: "string", description: "Token address or ticker" } },
+      required: ["query"],
     },
   },
   {
