@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "./BrandMark";
+import { InstallApp } from "./InstallApp";
+import { SiteSearch } from "./SiteSearch";
 import { TabBar } from "./TabBar";
 import { WalletButton } from "./WalletButton";
 import { MORE_LINKS, TABS, mcpHttpUrl } from "@/lib/site";
@@ -30,16 +32,24 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-50">
-      <div className="border-b border-white/[0.06] bg-[#080706]/92 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+      <div className="border-b border-white/[0.08] bg-[#080706]/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6 pt-[env(safe-area-inset-top)]">
           <BrandMark size={32} />
           <div className="flex min-w-0 items-center gap-2">
             <Link
               href="/connect"
-              className="hidden min-w-0 max-w-[46vw] truncate rounded-md border border-white/10 bg-black/40 px-2.5 py-1 font-mono text-[11px] text-gold/90 hover:border-gold/40 lg:inline"
+              className="hidden min-w-0 max-w-[36vw] truncate rounded-full border border-white/10 bg-black/40 px-3 py-1.5 font-mono text-[11px] text-ember hover:border-ember/40 xl:inline"
               title={mcp}
             >
               {mcp.replace("https://", "")}
+            </Link>
+            <InstallApp compact />
+            <SiteSearch />
+            <Link
+              href="/developers"
+              className="hidden rounded-full border border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-ivory/80 hover:text-ivory sm:inline"
+            >
+              Developers
             </Link>
             <div className="relative" ref={menu}>
               <button
@@ -47,14 +57,15 @@ export function Nav() {
                 aria-expanded={open}
                 aria-haspopup="menu"
                 onClick={() => setOpen((v) => !v)}
-                className="rounded-md border border-white/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-ivory/70 hover:text-ivory"
+                className="rounded-full border border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-ivory/80 hover:text-ivory"
+                aria-label="More navigation links"
               >
                 More
               </button>
               {open ? (
                 <div
                   role="menu"
-                  className="absolute right-0 top-9 z-50 w-48 overflow-hidden rounded-xl border border-white/10 bg-[#0c0b0a] py-1 shadow-2xl"
+                  className="glass-3 absolute right-0 top-10 z-50 max-h-[min(70vh,28rem)] w-56 overflow-y-auto py-1"
                 >
                   {MORE_LINKS.map((l) => (
                     <Link

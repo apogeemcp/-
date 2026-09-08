@@ -140,8 +140,10 @@ export async function preparePonsLaunch(draft: LaunchDraft) {
   const name = draft.name?.trim();
   const symbol = draft.symbol?.trim().toUpperCase();
   if (!name || !symbol) return { ok: false, error: "Need a token name and ticker." };
+  if (name.length > 64 || symbol.length > 16) return { ok: false, error: "Name or ticker is too long." };
   const preview = await previewPonsLaunch(draft);
   if (!preview.ok) return preview;
+  if (!preview.launchEnabled) return { ...preview, ok: false, error: "pons v2 launches are currently disabled on-chain." };
   const recipient =
     draft.creatorFeeRecipient && isAddress(draft.creatorFeeRecipient) ? draft.creatorFeeRecipient : ZERO;
   const data = encodeFunctionData({
@@ -161,7 +163,7 @@ export async function preparePonsLaunch(draft: LaunchDraft) {
           farcaster: "",
         },
         creatorFeeRecipient: recipient as `0x${string}`,
-        creatorTaxBps: draft.creatorTaxBps ?? 0,
+        creatorTaxBps: Math.min(10_000, Math.max(0, Number(draft.creatorTaxBps ?? 0))),
         buybackEnabled: draft.buybackEnabled ?? true,
         expectedEconomics: preview.expectedEconomics as Hex,
       },

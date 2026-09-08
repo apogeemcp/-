@@ -1,0 +1,14 @@
+{
+  "name": "Apogee",
+  "short_name": "Apogee",
+  "description": "Robinhood Chain intel for agents. Search, chart, desk, launch, Orbit.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07070a",
+  "theme_color": "#07070a",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

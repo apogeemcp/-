@@ -1,5 +1,6 @@
 import { CHAIN, ENDPOINTS, TOKENS, isAddress, explorerAddress, explorerTx, explorerToken } from "./chain";
 import { fetchJson, nativeBalance, erc20Balance, erc20Meta, formatUnits, latestBlock, gasPriceWei } from "./rpc";
+import { geckoPoolTrades, geckoTokenPools } from "./gecko";
 
 type DsPair = {
   chainId?: string;
@@ -112,12 +113,18 @@ export async function getWalletTxs(address: string, page = 1, offset = 40) {
     failed: t.isError === "1",
     explorer: t.hash ? explorerTx(t.hash) : null,
   });
+  const nativeRows = Array.isArray(native) ? native : [];
+  const tokenRows = Array.isArray(tokens) ? tokens : [];
   return {
     ok: true,
     address,
     explorer: explorerAddress(address),
-    native: (native || []).map((t) => mapTx(t, "eth")),
-    tokens: (tokens || []).map((t) => mapTx(t, "erc20")),
+    native: nativeRows.map((t) => mapTx(t, "eth")),
+    tokens: tokenRows.map((t) => mapTx(t, "erc20")),
+    note:
+      !Array.isArray(native) && !Array.isArray(tokens)
+        ? "Blockscout account APIs are Cloudflare-gated from this host. Balances still come from RPC."
+        : undefined,
   };
 }
 
@@ -178,7 +185,12 @@ export async function getWalletPnl(address: string) {
     equityUsd: (nativeUsd || 0) + tokenUsd,
     positions,
     recent: "ok" in txs && txs.ok ? [...(txs.native || []), ...(txs.tokens || [])].slice(0, 24) : [],
-    note: "PnL is mark-to-market from DexScreener USD prices plus explorer transfers. Cost basis is not recovered when Blockscout history is truncated.",
+    note: [
+      "PnL is mark-to-market from DexScreener USD prices plus explorer transfers. Cost basis is not recovered when Blockscout history is truncated.",
+      "ok" in txs && txs.ok && "note" in txs ? String(txs.note || "") : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
   };
 }
 
@@ -257,32 +269,17 @@ export async function getTokenAnalytics(query: string, window = "24h") {
 }
 
 export async function getTopTraders(query: string) {
-  const pairs = await (query.match(/^0x[a-fA-F0-9]{40}$/) ? tokenPairs(query) : searchDex(query));
-  const p = pairs[0];
-  if (!p?.baseToken?.address) return { ok: false, error: `No market for ${query}` };
-  const transfers = await explorer<ExplorerTx[]>({
-    module: "account",
-    action: "tokentx",
-    address: p.baseToken.address,
-    sort: "desc",
-    page: "1",
-    offset: "80",
-  });
+  const activity = await getTokenActivity(query);
+  if (!activity.ok || !("trades" in activity)) return activity;
   const counts = new Map<string, { buys: number; sells: number; volume: number }>();
-  const token = p.baseToken.address.toLowerCase();
-  for (const t of transfers || []) {
-    const dec = Number(t.tokenDecimal || 18);
-    const amt = Number(t.value || 0) / 10 ** (Number.isFinite(dec) ? dec : 18);
-    const add = (addr: string, side: "buys" | "sells") => {
-      const a = addr.toLowerCase();
-      if (!a || a === token) return;
-      const cur = counts.get(a) || { buys: 0, sells: 0, volume: 0 };
-      cur[side] += 1;
-      cur.volume += Number.isFinite(amt) ? amt : 0;
-      counts.set(a, cur);
-    };
-    if (t.to) add(t.to, "buys");
-    if (t.from) add(t.from, "sells");
+  for (const t of activity.trades || []) {
+    const addr = String(t.wallet || "").toLowerCase();
+    if (!addr || !isAddress(addr)) continue;
+    const cur = counts.get(addr) || { buys: 0, sells: 0, volume: 0 };
+    if (t.side === "buy") cur.buys += 1;
+    if (t.side === "sell") cur.sells += 1;
+    cur.volume += Number(t.usd || 0);
+    counts.set(addr, cur);
   }
   const traders = [...counts.entries()]
     .map(([address, s]) => ({ address, ...s, explorer: explorerAddress(address) }))
@@ -291,9 +288,9 @@ export async function getTopTraders(query: string) {
   return {
     ok: true,
     query,
-    token: p.baseToken,
+    token: activity.token,
     traders,
-    note: "Flow proxy from recent explorer token transfers, not a full holder ledger.",
+    note: "Wallets ranked by recent GeckoTerminal trade USD. Not a full holder ledger.",
   };
 }
 
@@ -302,6 +299,146 @@ export async function getSmartMoney(query: string) {
   if (!top.ok || !("traders" in top)) return top;
   const smart = (top.traders || []).filter((t) => t.buys >= 2 && t.volume > 0).slice(0, 12);
   return { ...top, smart, note: "Wallets with repeat buys in the recent transfer window." };
+}
+
+const DEAD = new Set([
+  "0x0000000000000000000000000000000000000000",
+  "0x000000000000000000000000000000000000dead",
+  "0x0000000000000000000000000000000000000001",
+]);
+
+export async function getTokenActivity(query: string) {
+  const pairs = await (query.match(/^0x[a-fA-F0-9]{40}$/) ? tokenPairs(query) : searchDex(query));
+  const p = pairs[0];
+  const token = (p?.baseToken?.address || (query.match(/^0x[a-fA-F0-9]{40}$/) ? query : "")).toLowerCase();
+  if (!token || !isAddress(token)) return { ok: false, error: `No Robinhood Chain token for ${query}` };
+  let pool = p?.pairAddress || "";
+  if (!pool) {
+    const gPools = await geckoTokenPools(token).catch(() => []);
+    pool = gPools[0]?.poolAddress || "";
+  }
+  const [geckoTrades, transfers] = await Promise.all([
+    pool ? geckoPoolTrades(pool, 80).catch(() => []) : Promise.resolve([]),
+    explorer<ExplorerTx[]>({
+      module: "account",
+      action: "tokentx",
+      address: token,
+      sort: "desc",
+      page: "1",
+      offset: "80",
+    }),
+  ]);
+  const pairAddrs = new Set(pairs.map((x) => (x.pairAddress || "").toLowerCase()).filter(Boolean));
+  const dec = Number(transfers?.[0]?.tokenDecimal || 18);
+  const px = pairUsd(p);
+  const explorerRows = Array.isArray(transfers)
+    ? transfers.map((t) => {
+        const from = (t.from || "").toLowerCase();
+        const to = (t.to || "").toLowerCase();
+        const amt = Number(t.value || 0) / 10 ** (Number.isFinite(dec) ? dec : 18);
+        let side: "buy" | "sell" | "burn" | "transfer" = "transfer";
+        if (DEAD.has(to)) side = "burn";
+        else if (pairAddrs.has(from)) side = "buy";
+        else if (pairAddrs.has(to)) side = "sell";
+        return {
+          side,
+          hash: t.hash,
+          from: t.from,
+          to: t.to,
+          wallet: side === "buy" ? t.to : t.from,
+          amount: Number.isFinite(amt) ? amt : null,
+          usd: px && Number.isFinite(amt) ? amt * px : null,
+          priceUsd: px,
+          timestamp: t.timeStamp ? Number(t.timeStamp) : null,
+          explorer: t.hash ? explorerTx(t.hash) : null,
+          source: "explorer" as const,
+        };
+      })
+    : [];
+  const geckoRows = geckoTrades.map((t) => ({
+    side: t.side as "buy" | "sell" | "burn" | "transfer",
+    hash: t.hash,
+    from: t.side === "sell" ? t.wallet : pool,
+    to: t.side === "buy" ? t.wallet : pool,
+    wallet: t.wallet,
+    amount: t.amount,
+    usd: t.usd,
+    priceUsd: t.priceUsd,
+    timestamp: t.timestamp,
+    explorer: t.explorer,
+    source: "geckoterminal" as const,
+  }));
+  const burns = explorerRows.filter((r) => r.side === "burn");
+  const trades = geckoRows.length ? geckoRows : explorerRows.filter((r) => r.side === "buy" || r.side === "sell");
+  const burnedAmt = burns.reduce((s, r) => s + (r.amount || 0), 0);
+  return {
+    ok: true,
+    query,
+    token: p?.baseToken || { address: token },
+    pair: pool || p?.pairAddress || null,
+    priceUsd: px,
+    trades,
+    transfers: explorerRows,
+    burns,
+    burnedAmount: burnedAmt,
+    burnedUsd: px ? burnedAmt * px : null,
+    buys: trades.filter((t) => t.side === "buy").length,
+    sells: trades.filter((t) => t.side === "sell").length,
+    source: geckoRows.length ? "geckoterminal" : Array.isArray(transfers) ? "explorer" : "none",
+    note: geckoRows.length
+      ? "Buys/sells from GeckoTerminal pool trades. Burns still require explorer token transfers (Blockscout is often Cloudflare-gated)."
+      : Array.isArray(transfers)
+        ? "Buy/sell inferred from DexScreener pair addresses vs explorer tokentx. Burns are transfers to zero/dead."
+        : "Blockscout tokentx is Cloudflare-gated from this host. No Gecko pool trades either.",
+  };
+}
+
+export async function getHolderProxy(address: string) {
+  if (!isAddress(address)) return { ok: false, error: "Provide a token address." };
+  const [pairs, activity] = await Promise.all([tokenPairs(address), getTokenActivity(address)]);
+  const balances = new Map<string, number>();
+  if (activity.ok && "transfers" in activity && (activity.transfers || []).length) {
+    for (const t of activity.transfers || []) {
+      const amt = t.amount || 0;
+      if (t.from) balances.set(t.from.toLowerCase(), (balances.get(t.from.toLowerCase()) || 0) - amt);
+      if (t.to) balances.set(t.to.toLowerCase(), (balances.get(t.to.toLowerCase()) || 0) + amt);
+    }
+  } else if (activity.ok && "trades" in activity) {
+    for (const t of activity.trades || []) {
+      const wallet = String(t.wallet || t.to || t.from || "").toLowerCase();
+      if (!wallet || !isAddress(wallet)) continue;
+      const vol = Number(t.usd || t.amount || 0);
+      balances.set(wallet, (balances.get(wallet) || 0) + (Number.isFinite(vol) ? vol : 0));
+    }
+  }
+  const token = address.toLowerCase();
+  const holders = [...balances.entries()]
+    .filter(([addr, bal]) => bal > 0 && addr !== token && !DEAD.has(addr))
+    .sort((a, b) => b[1] - a[1]);
+  const total = holders.reduce((s, [, b]) => s + b, 0) || 1;
+  const top = holders.slice(0, 20).map(([addr, amount]) => ({
+    address: addr,
+    amount,
+    pct: (amount / total) * 100,
+    explorer: explorerAddress(addr),
+  }));
+  const fromTrades = !(activity.ok && "transfers" in activity && (activity.transfers || []).length);
+  return {
+    ok: true,
+    address,
+    holderCountProxy: holders.length,
+    top,
+    concentrationTop10: top.slice(0, 10).reduce((s, h) => s + h.pct, 0),
+    markets: pairs.slice(0, 8).map((p) => ({
+      pair: p.pairAddress,
+      dex: p.dexId,
+      liquidityUsd: p.liquidity?.usd ?? null,
+      priceUsd: num(p.priceUsd),
+    })),
+    note: fromTrades
+      ? "Top wallets by recent GeckoTerminal trade USD (not a full holder ledger). Blockscout holder APIs are Cloudflare-gated."
+      : "Holder counts are a recent-transfer net-flow proxy (Blockscout holder APIs are Cloudflare-gated). Not a complete ledger.",
+  };
 }
 
 export async function getFirstBuyers(query: string) {

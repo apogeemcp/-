@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.apogee-api]
 verify_jwt = false
+
+[functions.apogee-hub]
+verify_jwt = false

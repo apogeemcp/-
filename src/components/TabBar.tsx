@@ -82,10 +82,10 @@ export function TabBar({ tabs }: { tabs: readonly { href: string; label: string;
                 key={t.href}
                 href={t.href}
                 aria-current={on ? "page" : undefined}
-                className="flex flex-col items-center gap-0.5 py-2.5"
+                className="flex min-h-11 flex-col items-center justify-center gap-0.5 py-2"
               >
                 {ICONS[t.href]?.(on)}
-                <span className={`text-[10px] tracking-[0.12em] ${on ? "text-gold" : "text-ivory/40"}`}>{t.label}</span>
+                <span className={`text-[10px] tracking-[0.12em] ${on ? "text-gold" : "text-ivory/65"}`}>{t.label}</span>
               </Link>
             );
           })}

@@ -92,7 +92,15 @@ export function ipfsHttp(uri: string | null | undefined): string | null {
   if (!uri) return null;
   const u = uri.trim();
   if (!u) return null;
-  if (u.startsWith("ipfs://")) return `https://ipfs.io/ipfs/${u.slice("ipfs://".length)}`;
+  if (u.startsWith("ipfs://")) {
+    const path = u.slice("ipfs://".length).replace(/^ipfs\//, "");
+    return `https://ipfs.io/ipfs/${path}`;
+  }
+  if (u.startsWith("ipns://")) return `https://ipfs.io/ipns/${u.slice("ipns://".length)}`;
+  if (u.startsWith("ar://")) return `https://arweave.net/${u.slice("ar://".length)}`;
+  const ipfsPath = u.match(/\/ipfs\/([A-Za-z0-9]+)(.*)$/);
+  if (u.includes("ipfs") && ipfsPath && !u.startsWith("http")) return `https://ipfs.io/ipfs/${ipfsPath[1]}${ipfsPath[2] || ""}`;
+  if (/^[A-Za-z0-9]{46,}$/.test(u)) return `https://ipfs.io/ipfs/${u}`;
   return u;
 }
 

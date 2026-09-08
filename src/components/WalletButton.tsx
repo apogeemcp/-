@@ -16,7 +16,16 @@ export function WalletButton() {
       <button
         type="button"
         onClick={connect}
-        className="rounded-md bg-gold px-3 py-1.5 text-[11px] font-medium tracking-[0.08em] text-void hover:bg-gold-bright"
+        aria-label={
+          connecting
+            ? "Connecting wallet"
+            : address
+              ? onChain
+                ? `Connected ${address}`
+                : `Connected ${address}, wrong network — click to switch to Robinhood Chain`
+              : "Connect Phantom wallet"
+        }
+        className="rounded-full bg-gradient-to-b from-flare to-blood px-3 py-2 text-[11px] font-medium tracking-[0.08em] text-ivory hover:brightness-110"
       >
         {label}
       </button>

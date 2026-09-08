@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { TokenMedia } from "./TokenMedia";
 
 export type PonsLaunch = {
   generation?: "v1" | "v2";
@@ -37,20 +39,13 @@ export function LaunchGrid({ launches, compact = false }: { launches: PonsLaunch
   return (
     <div className={`grid gap-3 ${compact ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
       {launches.map((l) => (
-        <a
+        <Link
           key={l.token}
-          href={`/dashboard?scan=${l.token}`}
-          className="group rounded-xl border border-white/5 bg-black/35 p-4 hover:border-gold/40"
+          href={`/token/${l.token}`}
+          className="group rounded-[16px] border border-white/10 bg-black/35 p-4 transition hover:-translate-y-0.5 hover:border-ember/40"
         >
           <div className="flex items-start gap-3">
-            {l.logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={l.logo} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-gold/30" />
-            ) : (
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/15 font-display text-gold">
-                {(l.symbol || "?").slice(0, 1)}
-              </span>
-            )}
+            <TokenMedia src={l.logo} symbol={l.symbol} name={l.name} size={40} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-ivory">
                 {l.name || l.symbol || "untitled"}{" "}
@@ -60,7 +55,7 @@ export function LaunchGrid({ launches, compact = false }: { launches: PonsLaunch
                 {l.generation} · {l.quote} · {l.phase || (l.graduated ? "graduated" : "live")}
               </p>
             </div>
-            <span className="text-[10px] uppercase tracking-[0.16em] text-gold">
+            <span className="text-[10px] uppercase tracking-[0.16em] text-ember">
               {l.graduated ? "grad" : `${Math.round((l.progress || 0) * 100)}%`}
             </span>
           </div>
@@ -71,7 +66,7 @@ export function LaunchGrid({ launches, compact = false }: { launches: PonsLaunch
               : "curve / pool"}
             {l.thresholdEth ? ` · ${l.thresholdEth} ETH thresh` : ""}
           </p>
-        </a>
+        </Link>
       ))}
     </div>
   );
@@ -117,7 +112,7 @@ export function LaunchPad() {
           href="https://www.ponsfamily.com/launchpad"
           className="text-[11px] uppercase tracking-[0.18em] text-ember hover:text-gold"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
         >
           pons app ↗
         </a>

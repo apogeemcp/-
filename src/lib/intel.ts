@@ -8,6 +8,8 @@ import {
   getBlockTool,
   getContractMeta,
   getFirstBuyers,
+  getHolderProxy,
+  getTokenActivity,
   getGasOracle,
   getMarketOverview,
   getSmartMoney,
@@ -22,6 +24,16 @@ import {
 import { getCurveQuote, getMcpInfo, preparePonsBuy, preparePonsLaunch, previewPonsLaunch } from "./launch";
 import { CATALOG_SIZE } from "./catalog";
 import { mcpHttpUrl } from "./site";
+import { mediaUrl } from "./media";
+import { moneyField } from "./market";
+import {
+  geckoNewPools,
+  geckoOhlcv,
+  geckoToken,
+  geckoTokenPools,
+  geckoTopPools,
+  geckoTrending,
+} from "./gecko";
 
 export type DsPair = {
   chainId?: string;
@@ -79,8 +91,7 @@ function rhPairs(pairs: DsPair[] | null | undefined): DsPair[] {
 }
 
 function num(v: unknown): number | null {
-  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
-  return Number.isFinite(n) ? n : null;
+  return moneyField(v, { allowNegative: true });
 }
 
 function ageDaysFromMs(ms: number | null | undefined): number | null {
@@ -145,69 +156,20 @@ export async function pairByAddress(pairAddress: string): Promise<DsPair | null>
   return res.data?.pair || res.data?.pairs?.[0] || null;
 }
 
-type GeckoPool = {
-  id?: string;
-  attributes?: Record<string, unknown>;
-  relationships?: Record<string, unknown>;
-};
-
-function geckoPools(data: GeckoPool[] | undefined) {
-  return (data || []).map((row) => {
-    const a = (row.attributes || {}) as Record<string, unknown>;
-    const pc = (a.price_change_percentage as Record<string, unknown>) || {};
-    return {
-      id: row.id,
-      address: a.address,
-      name: a.name,
-      priceUsd: num(a.base_token_price_usd),
-      fdvUsd: num(a.fdv_usd),
-      marketCapUsd: num(a.market_cap_usd),
-      createdAt: a.pool_created_at,
-      reserveUsd: num(a.reserve_in_usd),
-      volume24h: num((a.volume_usd as Record<string, unknown> | undefined)?.h24),
-      change5m: num(pc.m5),
-      change1h: num(pc.h1),
-      change6h: num(pc.h6),
-      change24h: num(pc.h24),
-      txns24h: (a.transactions as Record<string, unknown> | undefined)?.h24 ?? null,
-    };
-  });
-}
-
 export async function trendingPools(duration = "1h") {
-  const res = await fetchJson<{ data?: GeckoPool[] }>(
-    `${ENDPOINTS.gecko}/networks/${CHAIN.geckoNetwork}/trending_pools?duration=${encodeURIComponent(duration)}`,
-    { headers: { accept: "application/json;version=20230302" } },
-  );
-  return geckoPools(res.data?.data);
+  return geckoTrending(duration);
 }
 
 export async function newPools() {
-  const res = await fetchJson<{ data?: GeckoPool[] }>(
-    `${ENDPOINTS.gecko}/networks/${CHAIN.geckoNetwork}/new_pools?page=1`,
-    { headers: { accept: "application/json;version=20230302" } },
-  );
-  return geckoPools(res.data?.data);
+  return geckoNewPools();
 }
 
 export async function topPools() {
-  const res = await fetchJson<{ data?: GeckoPool[] }>(
-    `${ENDPOINTS.gecko}/networks/${CHAIN.geckoNetwork}/pools?page=1`,
-    { headers: { accept: "application/json;version=20230302" } },
-  );
-  return geckoPools(res.data?.data);
+  return geckoTopPools();
 }
 
 export async function ohlcv(pool: string, timeframe = "minute", aggregate = 5, limit = 120) {
-  const res = await fetchJson<{ data?: { attributes?: { ohlcv_list?: number[][] } } }>(
-    `${ENDPOINTS.gecko}/networks/${CHAIN.geckoNetwork}/pools/${pool}/ohlcv/${timeframe}?aggregate=${aggregate}&limit=${Math.min(limit, 1000)}&currency=usd`,
-    { headers: { accept: "application/json;version=20230302" } },
-  );
-  const rows = res.data?.data?.attributes?.ohlcv_list || [];
-  return rows
-    .slice()
-    .reverse()
-    .map(([time, open, high, low, close, volume]) => ({ time, open, high, low, close, volume }));
+  return geckoOhlcv(pool, timeframe, aggregate, limit);
 }
 
 export async function llamaTvl(): Promise<number | null> {
@@ -246,11 +208,11 @@ function tokenFromPair(p: DsPair) {
     quote: p.quoteToken,
     pairAddress: p.pairAddress,
     dexId: p.dexId,
-    priceUsd: num(p.priceUsd),
-    liquidityUsd: p.liquidity?.usd ?? null,
-    volume24h: p.volume?.h24 ?? null,
-    fdv: p.fdv ?? null,
-    marketCap: p.marketCap ?? p.fdv ?? null,
+    priceUsd: moneyField(p.priceUsd),
+    liquidityUsd: moneyField(p.liquidity?.usd),
+    volume24h: moneyField(p.volume?.h24),
+    fdv: moneyField(p.fdv),
+    marketCap: moneyField(p.marketCap ?? p.fdv),
     priceChange: p.priceChange || null,
     txns24h: p.txns?.h24 || null,
     createdAt: p.pairCreatedAt || null,
@@ -305,7 +267,7 @@ export async function scanToken(query: string) {
             address: ponsOnly.token,
             name: ponsOnly.meta?.name,
             symbol: ponsOnly.meta?.symbol,
-            image: ponsOnly.meta?.logo || null,
+            image: mediaUrl(ponsOnly.meta?.logo || null),
             priceUsd: ponsOnly.priceUsd ?? null,
             mcap: ponsOnly.marketCapUsd ?? null,
             liquidity: null,
@@ -362,7 +324,7 @@ export async function scanToken(query: string) {
       address,
       name: best.baseToken?.name,
       symbol,
-      image: best.info?.imageUrl || canonical?.logoUrl || null,
+      image: mediaUrl(best.info?.imageUrl || canonical?.logoUrl || ponsHit?.meta?.logo || null),
       priceUsd: dexPrice,
       mcap,
       fdv: best.fdv ?? null,
@@ -395,11 +357,38 @@ export async function getToken(addressOrSymbol: string) {
   const scan = await scanToken(addressOrSymbol);
   if (!scan.ok || !("token" in scan) || !scan.token) return scan;
   const address = scan.token.address as string;
-  const [meta, pairs] = await Promise.all([erc20Meta(address).catch(() => null), tokenPairs(address)]);
+  const [meta, pairs, gecko] = await Promise.all([
+    erc20Meta(address).catch(() => null),
+    tokenPairs(address),
+    geckoToken(address).catch(() => null),
+  ]);
+  const socials = {
+    ...((scan.token.socials as Record<string, unknown>) || {}),
+    website: (scan.token.socials as { website?: string | null })?.website || gecko?.website || null,
+    x: (scan.token.socials as { x?: string | null })?.x || gecko?.twitter || null,
+    telegram: (scan.token.socials as { telegram?: string | null })?.telegram || gecko?.telegram || null,
+    discord: gecko?.discord || null,
+    image: (scan.token.socials as { image?: string | null })?.image || gecko?.image || scan.token.image || null,
+    banner: gecko?.banner || (scan.token.socials as { banner?: string | null })?.banner || null,
+  };
   return {
     ok: true,
-    token: scan.token,
+    token: {
+      ...scan.token,
+      image: scan.token.image || gecko?.image || null,
+      banner: gecko?.banner || null,
+      description: gecko?.description || null,
+      decimals: gecko?.decimals ?? meta?.decimals ?? null,
+      totalSupply: gecko?.totalSupply ?? (meta?.totalSupply != null ? String(meta.totalSupply) : null),
+      mcap: scan.token.mcap || gecko?.marketCapUsd || gecko?.fdvUsd || null,
+      liquidity: scan.token.liquidity || gecko?.liquidityUsd || null,
+      volume24h: scan.token.volume24h || gecko?.volume24h || null,
+      gtVerified: gecko?.gtVerified ?? false,
+      gtScore: gecko?.gtScore ?? null,
+      socials,
+    },
     onchain: meta,
+    gecko,
     markets: pairs.slice(0, 12).map(tokenFromPair),
     score: scan.score,
     flags: scan.flags,
@@ -608,16 +597,26 @@ export async function getSwapQuote(params: {
   };
 }
 
-export async function getChart(query: string, timeframe = "minute", aggregate = 5) {
+export async function getChart(query: string, timeframe = "minute", aggregate = 5, limit = 180) {
+  const cap = Math.min(Math.max(Number(limit) || 180, 24), 1000);
   const pairs = isAddress(query) ? await tokenPairs(query) : await searchDex(query);
-  const pool = pairs[0]?.pairAddress;
+  let pool = pairs[0]?.pairAddress || "";
+  let bars = pool ? await ohlcv(pool, timeframe, aggregate, cap) : [];
+  if (!bars.length && isAddress(query)) {
+    const gPools = await geckoTokenPools(query).catch(() => []);
+    const gPool = gPools[0]?.poolAddress;
+    if (gPool) {
+      pool = gPool;
+      bars = await ohlcv(pool, timeframe, aggregate, cap);
+    }
+  }
   if (!pool) return { ok: false, error: `No pool for ${query}` };
-  const bars = await ohlcv(pool, timeframe, aggregate, 180);
+  if (!bars.length) return { ok: false, error: `No candles yet for ${query}`, pool };
   return {
     ok: true,
     query,
     pool,
-    pair: tokenFromPair(pairs[0]),
+    pair: pairs[0] ? tokenFromPair(pairs[0]) : null,
     timeframe,
     aggregate,
     bars,
@@ -629,7 +628,12 @@ export const toolImpl = {
   scan_token: (args: Record<string, unknown>) => scanToken(String(args.query || args.address || args.mint || "")),
   get_token: (args: Record<string, unknown>) => getToken(String(args.address || args.query || "")),
   get_chart: (args: Record<string, unknown>) =>
-    getChart(String(args.query || args.pool || args.address || ""), String(args.timeframe || "minute"), Number(args.aggregate || 5)),
+    getChart(
+      String(args.query || args.pool || args.address || ""),
+      String(args.timeframe || "minute"),
+      Number(args.aggregate || 5) || 5,
+      Number(args.limit || 180) || 180,
+    ),
   get_desk: () => getDesk(),
   list_trending: (args: Record<string, unknown>) => trendingPools(String(args.duration || "1h")),
   list_launches: async (args: Record<string, unknown>) => {
@@ -660,17 +664,9 @@ export const toolImpl = {
     return q ? all.filter((a) => a.tokenSymbol.toLowerCase().includes(q) || a.tokenName.toLowerCase().includes(q)) : all;
   },
   get_stock_quote: (args: Record<string, unknown>) => getStockQuoteTool(String(args.symbol || args.ticker || "")),
-  get_holders: async (args: Record<string, unknown>) => {
-    const address = String(args.address || "");
-    if (!isAddress(address)) return { ok: false, error: "Provide a token address." };
-    const pairs = await tokenPairs(address);
-    return {
-      ok: true,
-      address,
-      note: "Blockscout holder APIs are Cloudflare-gated. Liquidity and market share below are from DexScreener pools.",
-      markets: pairs.slice(0, 8).map(tokenFromPair),
-    };
-  },
+  get_holders: (args: Record<string, unknown>) => getHolderProxy(String(args.address || args.query || "")),
+  get_token_activity: (args: Record<string, unknown>) =>
+    getTokenActivity(String(args.query || args.address || args.token || "")),
   get_wallet: (args: Record<string, unknown>) => getWallet(String(args.address || "")),
   get_chain_stats: () => getChainStats(),
   get_transaction: (args: Record<string, unknown>) => getTransaction(String(args.hash || args.tx || "")),

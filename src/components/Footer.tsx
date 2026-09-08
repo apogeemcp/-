@@ -1,74 +1,105 @@
 import Link from "next/link";
 import { BrandMark } from "./BrandMark";
-import { asset, CANONICAL_MCP, LEGAL, MORE_LINKS, PRODUCT, TABS } from "@/lib/site";
+import { CopyButton } from "./TokenMedia";
+import { COMMUNITY, FOOTER, LEGAL, PRODUCT, PROJECT_CA } from "@/lib/site";
 import { CHAIN } from "@/lib/chain";
 
 export function Footer() {
   return (
-    <footer className="relative z-10 mt-8 border-t border-white/10 bg-[#070706] pb-24 md:pb-0">
+    <footer className="relative z-10 mt-8 border-t border-white/10 pb-24 md:pb-0">
       <div className="hairline" />
       <div className="relative overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={asset("/brand/banner.png")}
-          alt=""
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[72%_40%] opacity-[0.16]"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#070706] via-[#070706]/88 to-[#070706]/75" />
-        <div className="relative mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
-          <div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#07070a] via-[#120608]/90 to-[#07070a]/80" />
+        <span className="orbit-ring opacity-30" />
+        <div className="relative mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-5">
+          <div className="lg:col-span-2">
             <BrandMark size={28} />
-            <p className="mt-3 text-sm leading-relaxed text-ivory/55">{PRODUCT.tag}</p>
-            <p className="mt-4 break-all font-mono text-[11px] text-gold">{CANONICAL_MCP}</p>
-            <p className="mt-3 text-[11px] leading-relaxed text-ivory/40">{LEGAL.affiliation}</p>
+            <p className="mt-3 font-script text-xl text-ember">{FOOTER.line}</p>
+            <p className="mt-2 text-sm leading-relaxed text-ivory/75">{PRODUCT.tag}</p>
+            <p className="mt-4 text-[11px] leading-relaxed text-ivory/65">{LEGAL.affiliation}</p>
           </div>
           <div>
-            <p className="kicker text-ivory/35">App</p>
-            <ul className="mt-3 space-y-2 text-sm text-ivory/70">
-              {TABS.map((t) => (
+            <p className="kicker">Platform</p>
+            <ul className="mt-3 space-y-2 text-sm text-ivory/80">
+              {FOOTER.platform.map((t) => (
                 <li key={t.href}>
-                  <Link href={t.href} className="hover:text-gold">
+                  <Link href={t.href} className="hover:text-ember">
                     {t.label}
-                    {t.hint ? <span className="text-ivory/30"> · {t.hint}</span> : null}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link href="/wallet" className="hover:text-ember">
+                  Profile
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p className="kicker">Resources</p>
+            <ul className="mt-3 space-y-2 text-sm text-ivory/80">
+              {FOOTER.resources.map((t) => (
+                <li key={t.href}>
+                  <Link href={t.href} className="hover:text-ember">
+                    {t.label}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link href="/connect" className="hover:text-ember">
+                  Connect MCP
+                </Link>
+              </li>
+            </ul>
+            <p className="kicker mt-5">Legal</p>
+            <ul className="mt-3 space-y-2 text-sm text-ivory/80">
+              {FOOTER.legal.map((t) => (
+                <li key={t.href}>
+                  <Link href={t.href} className="hover:text-ember">
+                    {t.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="kicker text-ivory/35">Setup & legal</p>
-            <ul className="mt-3 space-y-2 text-sm text-ivory/70">
-              {MORE_LINKS.map((t) => (
-                <li key={t.href}>
-                  <Link href={t.href} className="hover:text-gold">
-                    {t.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="kicker text-ivory/35">Network</p>
-            <ul className="mt-3 space-y-2 text-sm text-ivory/65">
+            <p className="kicker">Community</p>
+            <ul className="mt-3 space-y-2 text-sm text-ivory/80">
               <li>
-                {CHAIN.name} · {CHAIN.id}
+                <a href={COMMUNITY.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-ember">
+                  Telegram
+                </a>
               </li>
-              <li>Slug {CHAIN.slug}</li>
               <li>
-                {PRODUCT.toolCount} catalog ops · v{PRODUCT.version}
+                <a href={COMMUNITY.x} target="_blank" rel="noopener noreferrer" className="hover:text-ember">
+                  X
+                </a>
               </li>
-              <li>Updated {LEGAL.updated}</li>
+              <li>
+                <a href={COMMUNITY.github} target="_blank" rel="noopener noreferrer" className="hover:text-ember">
+                  GitHub
+                </a>
+              </li>
             </ul>
-            <p className="mt-4 text-[11px] leading-relaxed text-ivory/40">{LEGAL.pons}</p>
+            <p className="kicker mt-5">Token</p>
+            <p className="mt-2 font-mono text-[11px] text-ivory/80">
+              {PROJECT_CA.slice(0, 6)}…{PROJECT_CA.slice(-4)}
+            </p>
+            <div className="mt-2">
+              <CopyButton value={PROJECT_CA} label="Copy CA" />
+            </div>
           </div>
         </div>
       </div>
-      <div className="border-t border-white/5">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-5 text-[11px] leading-relaxed text-ivory/35 sm:px-6">
-          <p>{LEGAL.stock}</p>
-          <p>{LEGAL.keys}</p>
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-5 text-[11px] leading-relaxed text-ivory/65 sm:px-6">
           <p>
-            © {new Date().getFullYear()} {PRODUCT.name} · v{PRODUCT.version} · {LEGAL.updated}
+            {CHAIN.name} {CHAIN.id} · {PRODUCT.toolCount} ops · v{PRODUCT.version}
+          </p>
+          <p>{LEGAL.stock}</p>
+          <p>{LEGAL.disclaimer}</p>
+          <p>
+            © {new Date().getFullYear()} {PRODUCT.name} · {LEGAL.updated}
           </p>
         </div>
       </div>

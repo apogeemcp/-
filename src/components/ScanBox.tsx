@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { TokenMedia } from "./TokenMedia";
 
 type Scan = {
   ok?: boolean;
@@ -43,6 +44,8 @@ export function ScanBox() {
         body: JSON.stringify({ query }),
       });
       setOut(await r.json().then((j) => (j.result || j) as Scan));
+    } catch {
+      setOut({ error: "Scan failed. Check the connection and retry." });
     } finally {
       setBusy(false);
     }
@@ -69,7 +72,11 @@ export function ScanBox() {
       <p className="kicker">Scan</p>
       <h3 className="mt-1 font-display text-2xl">OG-style score for RH chain</h3>
       <form onSubmit={run} className="mt-4 flex gap-2">
+        <label htmlFor="scan-query" className="sr-only">
+          Token, ticker, or contract
+        </label>
         <input
+          id="scan-query"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="NVDA, ticker, or 0x…"
@@ -82,6 +89,22 @@ export function ScanBox() {
       {out?.error && <p className="mt-4 text-sm text-flare">{out.error}</p>}
       {out?.token && (
         <div className="mt-5 grid gap-3 sm:grid-cols-4">
+          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 p-3 sm:col-span-4">
+            <TokenMedia src={out.token.image} symbol={out.token.symbol} name={out.token.name} size={40} />
+            <p className="min-w-0 break-all font-mono text-[11px] text-ivory/80">
+              {out.token.symbol} · {out.token.address} · {out.token.canonicalStock ? "canonical stock" : "market token"} ·{" "}
+              {out.token.momentumLabel}
+              {out.token.address ? (
+                <>
+                  {" "}
+                  ·{" "}
+                  <a className="text-gold" href={`/token/${out.token.address}`}>
+                    Open terminal
+                  </a>
+                </>
+              ) : null}
+            </p>
+          </div>
           <Stat k="Score" v={String(out.score?.total ?? "—")} />
           <Stat k="Verdict" v={out.verdict || "—"} />
           <Stat k="Price" v={out.token.priceUsd != null ? `$${Number(out.token.priceUsd).toLocaleString(undefined, { maximumFractionDigits: 6 })}` : "—"} />
@@ -102,13 +125,10 @@ export function ScanBox() {
                   style={{ width: `${Math.round((progress || 0) * 100)}%` }}
                 />
               </div>
-              <p className="mt-2 text-[11px] text-ivory/40">{out.pons.graduation?.note}</p>
+              <p className="mt-2 text-[11px] text-ivory/70">{out.pons.graduation?.note}</p>
             </div>
           )}
-          <p className="sm:col-span-4 font-mono text-[11px] text-ivory/50">
-            {out.token.symbol} · {out.token.address} · {out.token.canonicalStock ? "canonical stock" : "market token"} ·{" "}
-            {out.token.momentumLabel}
-          </p>
+          {out.pons?.meta?.description ? <p className="sm:col-span-4 text-xs text-ivory/70">{out.pons.meta.description}</p> : null}
         </div>
       )}
     </section>
@@ -118,7 +138,7 @@ export function ScanBox() {
 function Stat({ k, v }: { k: string; v: string }) {
   return (
     <div className="rounded-xl border border-white/5 bg-black/30 p-3">
-      <p className="text-[10px] uppercase tracking-[0.18em] text-ivory/40">{k}</p>
+      <p className="text-[10px] uppercase tracking-[0.18em] text-ivory/70">{k}</p>
       <p className="mt-1 text-sm text-ivory">{v}</p>
     </div>
   );
