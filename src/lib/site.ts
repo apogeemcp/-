@@ -107,10 +107,57 @@ export const HOSTS = [
   { id: "codex", name: "Codex CLI", file: "~/.codex/config.toml", hint: "[mcp_servers.apogee] url = ..." },
 ] as const;
 
+export const ASSET_V = "4";
+
+export function asset(path: string): string {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${p}?v=${ASSET_V}`;
+}
+
 export const PRODUCT = {
   name: "Apogee",
   tag: "Robinhood Chain intel for agents",
-  pillars: ["Search", "Chart", "Desk", "Launch", "Track"] as const,
-  chain: CHAIN,
+  version: "2.0.0",
   toolCount: 3000,
+  chain: CHAIN,
+  pillars: [
+    { name: "Search", href: "/dashboard", blurb: "Tickers, contracts, and canonical Stock Tokens — resolve by address." },
+    { name: "Chart", href: "/dashboard", blurb: "GeckoTerminal candles on the robinhood slug, not chain id 4663." },
+    { name: "Desk", href: "/dashboard", blurb: "Trending pools, TVL, and RHJ oracle vs DEX premium." },
+    { name: "Launch", href: "/launches", blurb: "On-chain pons v1/v2. Phantom signs unsigned v2 txs locally." },
+    { name: "Track", href: "/wallet", blurb: "Wallet mark-to-market, explorer flow, and analytics proxies." },
+  ],
+} as const;
+
+export const LEGAL = {
+  updated: "September 8, 2026",
+  affiliation:
+    "Apogee is unaffiliated with Robinhood Markets, Inc., Robinhood Crypto, Robinhood Assets (Jersey) Ltd, and pons.",
+  stock:
+    "Stock Tokens are tokenised debt securities that may not be offered, sold, or delivered to persons in the United States, Canada, the United Kingdom, or Switzerland.",
+  pons:
+    "Write pons lowercase and link https://www.ponsfamily.com/launchpad. Apogee indexes public factory logs; it does not operate pons, is not a partner, and does not endorse any launch. Graduation is not a quality signal.",
+  keys:
+    "Never paste a seed phrase or private key. Wallet connect uses Phantom (or any EIP-1193 provider) locally. prepare_pons_launch returns an unsigned transaction — you sign it. Apogee does not broadcast unless you sign. Most tools are read-only; launch helpers are not.",
+  data:
+    "Market data comes from public RPC, DexScreener, GeckoTerminal, DefiLlama, RHJ Stock Token APIs, and on-chain pons reads. It can be delayed, incomplete, or wrong. Tickers collide — resolve by contract.",
+  mcp: CANONICAL_MCP,
+  alias: CANONICAL_MCP_ALIAS,
 };
+
+export const TABS = [
+  { href: "/", label: "Home", hint: "Orbit" },
+  { href: "/dashboard", label: "Desk", hint: "Scan" },
+  { href: "/launches", label: "Launch", hint: "pons" },
+  { href: "/orbit", label: "Orbit", hint: "Chat" },
+  { href: "/wallet", label: "Wallet", hint: "Track" },
+] as const;
+
+export const MORE_LINKS = [
+  { href: "/connect", label: "Connect MCP" },
+  { href: "/analytics", label: "Analytics" },
+  { href: "/docs", label: "Tools" },
+  { href: "/usage", label: "Usage" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
+] as const;

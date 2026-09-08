@@ -4,33 +4,35 @@ import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Providers } from "@/components/Providers";
-import { publicSiteUrl } from "@/lib/site";
+import { ASSET_V, PRODUCT, publicSiteUrl } from "@/lib/site";
 
 const syne = Syne({ subsets: ["latin"], variable: "--font-display" });
 const instrument = Instrument_Sans({ subsets: ["latin"], variable: "--font-body" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
 
+const title = `${PRODUCT.name} — ${PRODUCT.tag}`;
+const description = `${PRODUCT.toolCount} Robinhood Chain tools for agents. Search, chart, desk, wallet tracking, analytics, pons launch via Phantom. Live MCP at https://apogeemcp.digital/api/mcp — add to Cursor, Claude, ChatGPT, or Grok.`;
+
 export const metadata: Metadata = {
-  title: "Apogee — Robinhood Chain MCP",
-  description:
-    "3000 Robinhood Chain tools for agents. Search, chart, desk, wallet tracking, analytics, pons launch via Phantom. Live MCP at https://apogeemcp.digital/api/mcp — add to Cursor, Claude, ChatGPT, or Grok.",
+  title,
+  description,
   metadataBase: new URL(publicSiteUrl()),
   icons: {
-    icon: [{ url: "/brand/icon.png?v=3", type: "image/png" }],
-    apple: [{ url: "/apple-touch-icon.png?v=3" }],
-    shortcut: ["/icon.png?v=3"],
+    icon: [{ url: `/brand/icon.png?v=${ASSET_V}`, type: "image/png" }],
+    apple: [{ url: `/apple-touch-icon.png?v=${ASSET_V}` }],
+    shortcut: [`/icon.png?v=${ASSET_V}`],
   },
   openGraph: {
-    title: "Apogee MCP",
-    description: "Robinhood Chain intel for agents. Search. Chart. Desk. Launch. Indexed from pons on-chain.",
+    title: `${PRODUCT.name} MCP`,
+    description: `${PRODUCT.tag}. Search. Chart. Desk. Launch. Indexed from pons on-chain.`,
     type: "website",
-    images: [{ url: "/og.png?v=3", width: 1376, height: 768, alt: "Apogee — Robinhood Chain intel for agents" }],
+    images: [{ url: `/og.png?v=${ASSET_V}`, width: 1376, height: 768, alt: `${PRODUCT.name} — ${PRODUCT.tag}` }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Apogee MCP",
-    description: "Robinhood Chain intel for agents.",
-    images: ["/og.png?v=3"],
+    title: `${PRODUCT.name} MCP`,
+    description: PRODUCT.tag,
+    images: [`/og.png?v=${ASSET_V}`],
   },
 };
 

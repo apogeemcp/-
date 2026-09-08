@@ -28,20 +28,16 @@ export function AnalyticsDesk() {
 
   return (
     <div className="space-y-6">
-      <div className="glass rounded-3xl p-6">
-        <p className="text-[10px] uppercase tracking-[0.24em] text-gold">Analytics</p>
+      <div className="panel rounded-xl p-6">
+        <p className="kicker">Analytics</p>
         <h2 className="mt-2 font-display text-3xl">Flow, volume, smart money</h2>
         <p className="mt-2 text-sm text-ivory/60">
           TVL {typeof overview?.tvlUsd === "number" ? `$${Math.round(overview.tvlUsd).toLocaleString()}` : "—"} · gas{" "}
           {typeof overview?.gas === "number" ? `${overview.gas.toFixed(4)} gwei` : "—"}
         </p>
         <form className="mt-4 flex gap-2" onSubmit={run}>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 rounded-full border border-gold/20 bg-black/50 px-4 py-3 text-sm text-ivory outline-none"
-          />
-          <button className="rounded-full bg-gold px-5 py-3 text-xs uppercase tracking-[0.16em] text-void">Run</button>
+          <input value={query} onChange={(e) => setQuery(e.target.value)} className="field flex-1" />
+          <button className="btn-gold">Run</button>
         </form>
       </div>
       {analytics ? (
@@ -52,16 +48,16 @@ export function AnalyticsDesk() {
             ["Liquidity", analytics.liquidityUsd != null ? `$${Number(analytics.liquidityUsd).toLocaleString()}` : "—"],
             ["Change", analytics.changePct != null ? `${analytics.changePct}%` : "—"],
           ].map(([k, v]) => (
-            <div key={k} className="glass rounded-2xl p-4">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-gold">{k}</p>
+            <div key={k} className="panel rounded-xl p-4">
+              <p className="kicker">{k}</p>
               <p className="mt-2 font-mono text-sm text-ivory">{v}</p>
             </div>
           ))}
         </div>
       ) : null}
       {smart?.smart?.length ? (
-        <div className="glass rounded-2xl p-5">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-gold">Repeat-buy wallets</p>
+        <div className="panel rounded-xl p-5">
+          <p className="kicker">Repeat-buy wallets</p>
           <ul className="mt-3 space-y-1 font-mono text-[11px] text-ivory/70">
             {smart.smart.slice(0, 12).map((w) => (
               <li key={w.address}>

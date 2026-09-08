@@ -6,20 +6,25 @@ import { CHAIN } from "@/lib/chain";
 export function WalletButton() {
   const { address, connecting, connect, chainId, error } = useWallet();
   const onChain = chainId?.toLowerCase() === CHAIN.hexId.toLowerCase();
+  const label = connecting
+    ? "…"
+    : address
+      ? `${address.slice(0, 6)}…${address.slice(-4)}${onChain ? "" : " ⚠"}`
+      : "Phantom";
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="relative">
       <button
         type="button"
         onClick={connect}
-        className="rounded-full bg-gradient-to-r from-gold via-ember to-flare px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-void"
+        className="rounded-md bg-gold px-3 py-1.5 text-[11px] font-medium tracking-[0.08em] text-void hover:bg-gold-bright"
       >
-        {connecting
-          ? "Connecting…"
-          : address
-            ? `${address.slice(0, 6)}…${address.slice(-4)}${onChain ? "" : " · switch"}`
-            : "Connect Phantom"}
+        {label}
       </button>
-      {error ? <p className="max-w-[14rem] text-right text-[10px] text-flare">{error}</p> : null}
+      {error ? (
+        <p className="absolute right-0 top-9 z-40 w-48 rounded-md border border-flare/30 bg-black/90 p-2 text-[10px] text-flare">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

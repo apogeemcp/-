@@ -40,7 +40,7 @@ export function LaunchGrid({ launches, compact = false }: { launches: PonsLaunch
         <a
           key={l.token}
           href={`/dashboard?scan=${l.token}`}
-          className="group rounded-2xl border border-white/5 bg-black/35 p-4 hover:border-gold/40"
+          className="group rounded-xl border border-white/5 bg-black/35 p-4 hover:border-gold/40"
         >
           <div className="flex items-start gap-3">
             {l.logo ? (

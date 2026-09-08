@@ -51,24 +51,27 @@ export function OrbitChat() {
   }
 
   return (
-    <div className="glass flex min-h-[32rem] flex-col rounded-3xl p-5">
+    <div className="panel flex min-h-[32rem] flex-col rounded-xl p-5">
       <div className="flex-1 space-y-3 overflow-y-auto pr-1">
         {msgs.map((m, i) => (
-          <div key={i} className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm ${m.role === "user" ? "ml-auto bg-gold/15 text-ivory" : "bg-black/40 text-ivory/80"}`}>
+          <div
+            key={i}
+            className={`max-w-[90%] rounded-xl px-4 py-3 text-sm ${m.role === "user" ? "ml-auto bg-gold/15 text-ivory" : "bg-black/40 text-ivory/80"}`}
+          >
             <p className="whitespace-pre-wrap">{m.content}</p>
           </div>
         ))}
       </div>
       {prepared ? (
-        <div className="mt-4 rounded-2xl border border-ember/40 bg-black/40 p-4">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-ember">Unsigned pons launch</p>
+        <div className="mt-4 rounded-xl border border-ember/40 bg-black/40 p-4">
+          <p className="kicker text-ember">Unsigned pons launch</p>
           <p className="mt-1 font-mono text-[11px] text-ivory/60">to {prepared.to}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" onClick={sign} className="rounded-full bg-gradient-to-r from-gold via-ember to-flare px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-void">
+            <button type="button" onClick={sign} className="btn-gold">
               Sign in Phantom
             </button>
             {txHash ? (
-              <a className="rounded-full border border-gold/30 px-4 py-2 text-[11px] text-gold" href={explorerTx(txHash)} target="_blank" rel="noreferrer">
+              <a className="btn-ghost text-gold" href={explorerTx(txHash)} target="_blank" rel="noreferrer">
                 {txHash.slice(0, 10)}… ↗
               </a>
             ) : null}
@@ -86,9 +89,9 @@ export function OrbitChat() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Scan NVDA · track 0x… · launch token named Ember ticker EMB"
-          className="flex-1 rounded-full border border-gold/20 bg-black/50 px-4 py-3 text-sm text-ivory outline-none placeholder:text-ivory/30"
+          className="field flex-1"
         />
-        <button type="submit" disabled={busy} className="rounded-full bg-gold px-5 py-3 text-xs uppercase tracking-[0.16em] text-void disabled:opacity-50">
+        <button type="submit" disabled={busy} className="btn-gold">
           {busy ? "…" : "Send"}
         </button>
       </form>

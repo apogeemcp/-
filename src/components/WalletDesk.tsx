@@ -38,8 +38,8 @@ export function WalletDesk() {
 
   return (
     <div className="space-y-6">
-      <div className="glass rounded-3xl p-6">
-        <p className="text-[10px] uppercase tracking-[0.24em] text-gold">Wallet tracker</p>
+      <div className="panel rounded-xl p-6">
+        <p className="kicker">Wallet tracker</p>
         <h2 className="mt-2 font-display text-3xl">Robinhood Chain holdings</h2>
         <form
           className="mt-4 flex flex-wrap gap-2"
@@ -52,12 +52,12 @@ export function WalletDesk() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="0x wallet"
-            className="min-w-[16rem] flex-1 rounded-full border border-gold/20 bg-black/50 px-4 py-3 font-mono text-sm text-ivory outline-none"
+            className="field min-w-[16rem] flex-1 font-mono"
           />
-          <button type="submit" className="rounded-full border border-gold/40 px-5 py-3 text-xs uppercase tracking-[0.16em] text-ivory">
+          <button type="submit" className="btn-ghost">
             Track
           </button>
-          <button type="button" onClick={connect} className="rounded-full bg-gold px-5 py-3 text-xs uppercase tracking-[0.16em] text-void">
+          <button type="button" onClick={connect} className="btn-gold">
             {connecting ? "…" : address ? "Refresh Phantom" : "Connect Phantom"}
           </button>
         </form>
@@ -66,8 +66,8 @@ export function WalletDesk() {
       </div>
       {data && "ok" in data && data.ok !== false ? (
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="glass rounded-2xl p-5">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-gold">Equity (mark)</p>
+          <div className="panel rounded-xl p-5">
+            <p className="kicker">Equity (mark)</p>
             <p className="mt-2 font-display text-3xl text-ivory">
               {typeof data.equityUsd === "number" ? `$${data.equityUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"}
             </p>
@@ -75,8 +75,8 @@ export function WalletDesk() {
               explorer ↗
             </a>
           </div>
-          <div className="glass rounded-2xl p-5 lg:col-span-2">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-gold">Positions</p>
+          <div className="panel rounded-xl p-5 lg:col-span-2">
+            <p className="kicker">Positions</p>
             <ul className="mt-3 space-y-2">
               {positions.length ? (
                 positions.map((p) => (
@@ -92,8 +92,8 @@ export function WalletDesk() {
               )}
             </ul>
           </div>
-          <div className="glass rounded-2xl p-5 lg:col-span-3">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-gold">Recent flow</p>
+          <div className="panel rounded-xl p-5 lg:col-span-3">
+            <p className="kicker">Recent flow</p>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {recent.slice(0, 12).map((t, i) => (
                 <li key={t.hash || i} className="truncate font-mono text-[11px] text-ivory/60">

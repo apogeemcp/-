@@ -1,13 +1,20 @@
 import { WalletDesk } from "@/components/WalletDesk";
-import { SaturnBackdrop } from "@/components/SaturnBackdrop";
+import { PageFrame, PageHero } from "@/components/PageHero";
+import { LEGAL } from "@/lib/site";
 
 export default function WalletPage() {
   return (
-    <main className="relative min-h-screen">
-      <SaturnBackdrop className="pointer-events-none fixed inset-0 opacity-40" />
-      <div className="relative z-10 mx-auto max-w-6xl px-5 pb-24 pt-28">
+    <main>
+      <PageHero
+        compact
+        kicker="Track"
+        title="Wallet"
+        lede="Connect Phantom or paste any 0x address. Balances, mark-to-market USD, and explorer flow on Robinhood Chain."
+      />
+      <PageFrame>
         <WalletDesk />
-      </div>
+        <p className="text-xs leading-relaxed text-ivory/40">{LEGAL.keys}</p>
+      </PageFrame>
     </main>
   );
 }

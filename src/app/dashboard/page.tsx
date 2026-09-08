@@ -1,53 +1,23 @@
-import Image from "next/image";
 import { Suspense } from "react";
-import { ConnectPanel } from "@/components/ConnectPanel";
 import { DeskLive } from "@/components/DeskLive";
+import { PageFrame, PageHero } from "@/components/PageHero";
 import { ScanBox } from "@/components/ScanBox";
-import { SaturnBackdrop } from "@/components/SaturnBackdrop";
-import { TOOLS } from "@/lib/tools";
-import { PRODUCT } from "@/lib/site";
+import { CANONICAL_MCP, PRODUCT } from "@/lib/site";
 
 export default function DashboardPage() {
   return (
-    <main className="relative min-h-screen">
-      <SaturnBackdrop className="pointer-events-none fixed inset-0 opacity-50" />
-      <div className="relative z-10 mx-auto max-w-6xl space-y-8 px-5 pb-24 pt-28">
-        <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.4em] text-ember">3D desk · zero auth · pons-indexed</p>
-            <h1 className="mt-2 font-display text-4xl text-ivory sm:text-6xl">Mission control</h1>
-            <p className="mt-3 max-w-2xl text-ivory/70">
-              Configure Apogee once at <span className="font-mono text-gold">apogeemcp.digital/api/mcp</span>. {PRODUCT.toolCount}{" "}
-              Robinhood Chain operations: scans, candles, wallet tracking, analytics, and pons launches via Phantom.
-            </p>
-          </div>
-          <Image
-            src="/brand/logo.png?v=4"
-            alt="Apogee"
-            width={420}
-            height={236}
-            className="hidden w-72 object-contain sm:block"
-          />
-        </header>
-        <ConnectPanel />
+    <main>
+      <PageHero
+        kicker="Desk"
+        title="Mission control"
+        lede={`Live Robinhood Chain scan, trending, Stock Token desk, and pons. MCP ${CANONICAL_MCP} — ${PRODUCT.toolCount} catalog operations.`}
+      />
+      <PageFrame>
         <Suspense fallback={<p className="text-ivory/50">Loading scan…</p>}>
           <ScanBox />
         </Suspense>
         <DeskLive />
-        <section className="glass rounded-3xl p-6">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-gold">
-            {PRODUCT.toolCount} catalog ops · {TOOLS.length} listed tools
-          </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {TOOLS.map((t) => (
-              <div key={t.name} className="rounded-xl border border-white/5 px-3 py-3">
-                <p className="font-mono text-xs text-gold">{t.name}</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-ivory/55">{t.description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
+      </PageFrame>
     </main>
   );
 }

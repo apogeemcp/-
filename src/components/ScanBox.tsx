@@ -65,20 +65,17 @@ export function ScanBox() {
   const progress = out?.pons?.graduation?.progress;
 
   return (
-    <section className="glass rounded-3xl p-6">
-      <p className="text-[10px] uppercase tracking-[0.24em] text-gold">Scan</p>
+    <section className="panel rounded-xl p-6">
+      <p className="kicker">Scan</p>
       <h3 className="mt-1 font-display text-2xl">OG-style score for RH chain</h3>
       <form onSubmit={run} className="mt-4 flex gap-2">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="NVDA, ticker, or 0x…"
-          className="flex-1 rounded-full border border-gold/25 bg-black/40 px-4 py-2.5 font-mono text-sm outline-none focus:border-ember"
+          className="field flex-1 font-mono"
         />
-        <button
-          disabled={busy}
-          className="rounded-full bg-gradient-to-r from-gold via-ember to-flare px-5 py-2.5 text-sm text-void"
-        >
+        <button disabled={busy} className="btn-gold">
           {busy ? "Scanning" : "Scan"}
         </button>
       </form>
@@ -90,7 +87,7 @@ export function ScanBox() {
           <Stat k="Price" v={out.token.priceUsd != null ? `$${Number(out.token.priceUsd).toLocaleString(undefined, { maximumFractionDigits: 6 })}` : "—"} />
           <Stat k="Liq" v={out.token.liquidity != null ? `$${Math.round(out.token.liquidity).toLocaleString()}` : "—"} />
           {out.pons && (
-            <div className="sm:col-span-4 rounded-2xl border border-gold/20 bg-black/30 p-3">
+            <div className="rounded-xl border border-gold/20 bg-black/30 p-3 sm:col-span-4">
               <p className="text-[10px] uppercase tracking-[0.18em] text-gold">
                 pons {out.pons.generation} · {out.pons.venue}
               </p>
@@ -120,7 +117,7 @@ export function ScanBox() {
 
 function Stat({ k, v }: { k: string; v: string }) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-black/30 p-3">
+    <div className="rounded-xl border border-white/5 bg-black/30 p-3">
       <p className="text-[10px] uppercase tracking-[0.18em] text-ivory/40">{k}</p>
       <p className="mt-1 text-sm text-ivory">{v}</p>
     </div>

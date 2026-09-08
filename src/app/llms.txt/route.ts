@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
-import { CANONICAL_MCP, CANONICAL_ORIGIN } from "@/lib/site";
+import { CANONICAL_MCP, CANONICAL_ORIGIN, PRODUCT } from "@/lib/site";
 import { CATALOG_SIZE } from "@/lib/catalog";
 
 export function GET() {
   const body = `# Apogee MCP
 
-> Robinhood Chain intel for agents. Search. Chart. Desk. Launch. Track.
+> ${PRODUCT.tag}. ${PRODUCT.pillars.map((p) => p.name).join(". ")}.
 
 - Website: ${CANONICAL_ORIGIN}
 - MCP (no auth): ${CANONICAL_MCP}
 - Alias: ${CANONICAL_ORIGIN}/mcp
 - Chain: EIP-155 4663 (slug robinhood)
 - Catalog: ${CATALOG_SIZE} operations
+- Version: ${PRODUCT.version}
 - Connect: ${CANONICAL_ORIGIN}/connect
 - One-click: Cursor, Claude, ChatGPT, Grok
 

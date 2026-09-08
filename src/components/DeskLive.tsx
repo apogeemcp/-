@@ -43,16 +43,16 @@ export function DeskLive() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      <article className="glass rounded-3xl p-5">
-        <p className="text-[10px] uppercase tracking-[0.24em] text-gold">Chain</p>
+      <article className="panel rounded-xl p-5">
+        <p className="kicker">Chain</p>
         <p className="mt-3 font-display text-4xl text-ivory">{desk.chain?.block?.toLocaleString()}</p>
         <p className="text-xs uppercase tracking-[0.16em] text-ivory/50">latest block</p>
         <p className="mt-4 text-sm text-ivory/70">
           TVL ${Math.round(desk.chain?.tvlUsd || 0).toLocaleString()} · {desk.chain?.stockTokens} stock tokens
         </p>
       </article>
-      <article className="glass rounded-3xl p-5">
-        <p className="text-[10px] uppercase tracking-[0.24em] text-ember">Trending</p>
+      <article className="panel rounded-xl p-5">
+        <p className="kicker text-ember">Trending</p>
         <ul className="mt-3 space-y-2">
           {(desk.trending || []).slice(0, 6).map((t) => (
             <li key={String(t.address || t.name)} className="flex items-baseline justify-between gap-3 text-sm">
@@ -64,8 +64,8 @@ export function DeskLive() {
           ))}
         </ul>
       </article>
-      <article className="glass rounded-3xl p-5">
-        <p className="text-[10px] uppercase tracking-[0.24em] text-flare">Stock desk</p>
+      <article className="panel rounded-xl p-5">
+        <p className="kicker text-flare">Stock desk</p>
         <ul className="mt-3 space-y-2">
           {(desk.stocks || []).map((s) => (
             <li key={s.symbol} className="flex items-baseline justify-between gap-3 text-sm">
@@ -78,9 +78,9 @@ export function DeskLive() {
           ))}
         </ul>
       </article>
-      <article className="glass rounded-3xl p-5 lg:col-span-3">
+      <article className="panel rounded-xl p-5 lg:col-span-3">
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-gold">pons launches</p>
+          <p className="kicker">pons launches</p>
           <a href="/launches" className="text-[11px] uppercase tracking-[0.16em] text-ivory/50 hover:text-gold">
             All launches
           </a>

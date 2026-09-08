@@ -1,13 +1,20 @@
 import { AnalyticsDesk } from "@/components/AnalyticsDesk";
-import { SaturnBackdrop } from "@/components/SaturnBackdrop";
+import { PageFrame, PageHero } from "@/components/PageHero";
+import { LEGAL, PRODUCT } from "@/lib/site";
 
 export default function AnalyticsPage() {
   return (
-    <main className="relative min-h-screen">
-      <SaturnBackdrop className="pointer-events-none fixed inset-0 opacity-40" />
-      <div className="relative z-10 mx-auto max-w-6xl px-5 pb-24 pt-28">
+    <main>
+      <PageHero
+        compact
+        kicker="Flow"
+        title="Analytics"
+        lede={`Volume, liquidity, and repeat-buy wallets from DexScreener plus explorer transfers. Proxies, not a full ledger. Catalog ${PRODUCT.toolCount}.`}
+      />
+      <PageFrame>
         <AnalyticsDesk />
-      </div>
+        <p className="text-xs leading-relaxed text-ivory/40">{LEGAL.data}</p>
+      </PageFrame>
     </main>
   );
 }

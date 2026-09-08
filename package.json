@@ -1,6 +1,6 @@
 {
   "name": "apogee-mcp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Apogee MCP — Robinhood Chain intel for agents. Search. Chart. Desk. Launch.",
   "scripts": {
