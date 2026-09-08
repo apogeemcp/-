@@ -4,47 +4,31 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CANONICAL_MCP } from "@/lib/site";
 import { MCP_ACCESS, PLAN_INCLUDES, type AccessPlan, type PlanQuote, type PurchaseState } from "@/lib/access";
-import { useWallet } from "./WalletProvider";
+import { CopyButton } from "./TokenMedia";
 
 type Catalog = {
   ok: boolean;
-  live?: {
-    auth: string;
-    status: string;
-    gating: boolean;
-    payments: boolean;
-    burnVerifier: boolean;
-    checkout: string;
-  };
-  burnBps?: number;
-  opsBps?: number;
+  live?: { auth: string; status: string; checkout: string; assets?: string[] };
+  treasury?: string;
   tokenTicker?: string;
   burnProcess?: string;
+  paymentCopy?: string;
   includes?: string[];
   plans?: PlanQuote[];
   blocker?: { state: string; reason: string } | null;
 };
 
-const STATE_COPY: Record<PurchaseState, string> = {
-  select_plan: "Select a plan",
-  connect_wallet: "Connect wallet",
-  verify_wallet: "Verify wallet ownership",
-  breakdown: "Review purchase breakdown",
-  waiting_wallet: "Waiting for wallet",
-  awaiting_confirmation: "Awaiting confirmation",
-  transaction_submitted: "Transaction submitted",
-  confirming: "Confirming",
+const STATE_COPY: Partial<Record<PurchaseState, string>> = {
+  breakdown: "Send payment, then confirm",
+  awaiting_confirmation: "Awaiting Solscan link",
+  confirming: "Confirming on Solana",
   purchase_confirmed: "Purchase confirmed",
   access_activated: "Access activated",
-  buy_burn_processing: "Buy & burn processing",
-  burn_verified: "Burn verified",
+  buy_burn_processing: "Buy & burn is manual — pending on our side",
   complete: "Complete",
   rejected: "Rejected",
-  expired: "Expired",
   failed: "Failed",
-  insufficient_balance: "Insufficient balance",
   transaction_not_found: "Transaction not found",
-  burn_verification_failed: "Burn verification failed",
   unavailable: "Checkout unavailable",
 };
 
@@ -53,11 +37,16 @@ function usd(n: number) {
 }
 
 export function AccessPlans() {
-  const { address, connect, connecting, verified, verifying, verifyOwnership, error } = useWallet();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [selected, setSelected] = useState<PlanQuote | null>(null);
   const [state, setState] = useState<PurchaseState>("select_plan");
-  const [detail, setDetail] = useState<string>("");
+  const [detail, setDetail] = useState("");
+  const [solscan, setSolscan] = useState("");
+  const [receipt, setReceipt] = useState<{
+    explorerUrl?: string | null;
+    access?: { plan: string; expiresAt: string | null; lifetime: boolean } | null;
+    proof?: { asset?: string; amount?: number | null } | null;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -69,11 +58,14 @@ export function AccessPlans() {
 
   const rentals = useMemo(() => (catalog?.plans || []).filter((p) => p.plan.kind === "rental"), [catalog]);
   const lifetime = useMemo(() => (catalog?.plans || []).find((p) => p.plan.kind === "lifetime"), [catalog]);
+  const treasury = catalog?.treasury || MCP_ACCESS.treasury;
 
   function openPlan(quote: PlanQuote) {
     setSelected(quote);
     setState("breakdown");
     setDetail("");
+    setSolscan("");
+    setReceipt(null);
     void fetch("/api/analytics/event", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -85,43 +77,23 @@ export function AccessPlans() {
     if (!selected) return;
     setBusy(true);
     setDetail("");
+    setState("confirming");
     try {
-      if (!address) {
-        setState("connect_wallet");
-        setState("waiting_wallet");
-        const next = await connect();
-        if (!next) {
-          setState("failed");
-          setDetail("Wallet connection was cancelled or failed.");
-          return;
-        }
-      }
-      if (!verified) {
-        setState("verify_wallet");
-        const ok = await verifyOwnership();
-        if (!ok) {
-          setState("rejected");
-          setDetail("Wallet signature was not verified. A pasted address is not proof of ownership.");
-          return;
-        }
-      }
-      setState("awaiting_confirmation");
-      const res = await fetch("/api/access/checkout", {
+      const res = await fetch("/api/access/confirm", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ planId: selected.plan.id }),
+        body: JSON.stringify({ planId: selected.plan.id, solscan }),
       });
       const json = await res.json();
-      setState((json.state as PurchaseState) || "unavailable");
-      setDetail(
-        [
-          json.reason,
-          json.purchaseId ? `Quote id ${json.purchaseId} stored as quoted — not confirmed.` : json.persisted === false ? "Quote was not persisted (service role missing)." : "",
-          json.quote ? `Server price ${usd(json.quote.plan.priceUsd)} · burn allocation ${usd(json.quote.burnUsd)}.` : "",
-        ]
-          .filter(Boolean)
-          .join(" "),
-      );
+      setState((json.state as PurchaseState) || (res.ok ? "access_activated" : "failed"));
+      setDetail(json.reason || json.error || "");
+      if (json.ok) {
+        setReceipt({
+          explorerUrl: json.explorerUrl,
+          access: json.access,
+          proof: json.proof,
+        });
+      }
     } catch (e) {
       setState("failed");
       setDetail(e instanceof Error ? e.message : String(e));
@@ -130,19 +102,22 @@ export function AccessPlans() {
     }
   }
 
-  if (!catalog) {
-    return <p className="text-sm text-ivory/70">Loading access catalog…</p>;
-  }
+  if (!catalog) return <p className="text-sm text-ivory/70">Loading access catalog…</p>;
 
   return (
     <div className="space-y-10">
       <div className="rounded-xl border border-gold/30 bg-black/40 px-4 py-4 text-sm text-ivory/85">
-        <p className="kicker text-gold">Live MCP status</p>
+        <p className="kicker text-gold">How to pay</p>
         <p className="mt-2">
-          <span className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
-          PUBLIC · auth <span className="font-mono">{catalog.live?.auth || MCP_ACCESS.liveAuth}</span> · {CANONICAL_MCP}
+          Send <span className="text-ivory">SOL or USDC</span> on Solana to the treasury, then paste the Solscan
+          transaction link. Access activates after that payment is verified. Live MCP is still{" "}
+          <span className="font-mono">auth none</span> at {CANONICAL_MCP}.
         </p>
-        <p className="mt-2 text-ivory/70">{MCP_ACCESS.note}</p>
+        <p className="mt-3 break-all font-mono text-xs text-gold">{treasury}</p>
+        <div className="mt-2">
+          <CopyButton value={treasury} label="Copy treasury" />
+        </div>
+        <p className="mt-3 text-ivory/70">{MCP_ACCESS.note}</p>
       </div>
 
       <section id="allocation" className="panel overflow-hidden rounded-2xl p-5 sm:p-7">
@@ -153,15 +128,12 @@ export function AccessPlans() {
             <p className="font-mono text-3xl text-gold">25%</p>
             <p className="mt-1 text-sm font-medium text-ivory">{MCP_ACCESS.tokenTicker} buy &amp; burn</p>
             <p className="mt-2 text-xs leading-relaxed text-ivory/70">
-              Allocated after a purchase is confirmed. The UI says Burned only after a verified on-chain signature exists.
+              We buy and burn after payment. The UI says Burned only after that burn transaction is recorded.
             </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-black/30 p-5">
             <p className="font-mono text-3xl text-ivory">75%</p>
             <p className="mt-1 text-sm font-medium text-ivory">Marketing + development + infrastructure</p>
-            <p className="mt-2 text-xs leading-relaxed text-ivory/70">
-              Building Apogee, MCP maintenance, partnerships, and operations.
-            </p>
           </div>
         </div>
         <p className="mt-4 text-xs leading-relaxed text-ivory/65">{catalog.burnProcess || MCP_ACCESS.burnProcess}</p>
@@ -173,7 +145,7 @@ export function AccessPlans() {
             <p className="kicker">Rental access</p>
             <h2 className="mt-1 font-display text-3xl text-ivory">MCP Access Shop</h2>
           </div>
-          <p className="text-xs text-ivory/55">Prices from the backend catalog. Frontend amounts are never trusted.</p>
+          <p className="text-xs text-ivory/55">Pay the listed USD amount in SOL or USDC. Frontend prices are never trusted.</p>
         </div>
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           {rentals.map((q) => (
@@ -214,32 +186,53 @@ export function AccessPlans() {
             <p className="mt-1 text-sm text-ivory/70">{selected.plan.durationCopy}</p>
             <dl className="mt-5 space-y-2 text-sm">
               <Row k="You are purchasing" v={`${selected.plan.label} MCP Access`} />
-              <Row k="Price" v={usd(selected.plan.priceUsd)} />
+              <Row k="Price" v={`${usd(selected.plan.priceUsd)} in SOL or USDC`} />
               <Row k="Buy & burn allocation (25%)" v={usd(selected.burnUsd)} />
               <Row k="Remaining allocation (75%)" v={usd(selected.opsUsd)} />
-              <Row k="Wallet" v={address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Not connected"} />
-              <Row k="Payment method" v="On-chain (not configured)" />
-              <Row k="Ownership" v={verified ? "Verified signature" : "Unverified"} />
+              <Row k="Network" v="Solana" />
+              <Row k="Payment" v="Manual transfer" />
             </dl>
-            <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-ivory/70">
-              {(catalog.includes || PLAN_INCLUDES).map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-            <p className="mt-4 rounded-lg border border-white/10 bg-black/30 p-3 text-xs leading-relaxed text-ivory/70">
-              Confirming asks the backend for this plan’s server price and will not broadcast a payment. Access is not
-              activated from a quoted intent. Burns are never marked verified without an on-chain signature.
+            <div className="mt-4 rounded-lg border border-gold/30 bg-black/40 p-3">
+              <p className="kicker text-gold">Send to</p>
+              <p className="mt-2 break-all font-mono text-xs text-ivory">{treasury}</p>
+              <div className="mt-2">
+                <CopyButton value={treasury} label="Copy address" />
+              </div>
+              <p className="mt-2 text-xs text-ivory/65">SOL or USDC only. Do not send to any other address.</p>
+            </div>
+            <label className="mt-4 block text-sm">
+              Solscan transaction link
+              <input
+                className="field mt-2 w-full rounded-xl"
+                placeholder="https://solscan.io/tx/…"
+                value={solscan}
+                onChange={(e) => setSolscan(e.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <p className="mt-3 text-xs leading-relaxed text-ivory/70">
+              After you send the transfer, paste the Solscan link and confirm. Access is granted when the backend sees
+              SOL or USDC land in the treasury. Buy-and-burn is done on our side after that — not in this transaction.
             </p>
             {state !== "select_plan" && state !== "breakdown" ? (
               <p className="mt-4 text-sm text-gold">
-                {STATE_COPY[state]}
+                {STATE_COPY[state] || state}
                 {detail ? <span className="mt-2 block text-ivory/75">{detail}</span> : null}
               </p>
             ) : null}
-            {error ? <p className="mt-2 text-sm text-flare">{error}</p> : null}
+            {receipt?.explorerUrl ? (
+              <a href={receipt.explorerUrl} className="mt-3 inline-block text-sm text-ember" target="_blank" rel="noreferrer">
+                View payment on Solscan
+              </a>
+            ) : null}
+            {receipt?.access ? (
+              <p className="mt-2 text-sm text-ivory/80">
+                Access: {receipt.access.lifetime ? "Lifetime — never expires" : `Active until ${receipt.access.expiresAt ? new Date(receipt.access.expiresAt).toLocaleString() : "—"}`}
+              </p>
+            ) : null}
             <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-              <button type="button" disabled={busy || connecting || verifying} className="btn-primary flex-1" onClick={confirm}>
-                {busy ? "Working…" : connecting || verifying ? "Waiting for wallet…" : "Confirm purchase"}
+              <button type="button" disabled={busy || !solscan.trim()} className="btn-primary flex-1" onClick={confirm}>
+                {busy ? "Verifying…" : "Confirm with Solscan link"}
               </button>
               <button
                 type="button"
@@ -252,21 +245,14 @@ export function AccessPlans() {
                 Close
               </button>
             </div>
-            <p className="mt-3 text-[11px] text-ivory/50">
-              No transaction is submitted without an explicit wallet approval. Today the rail stops before a payment tx.
-            </p>
           </div>
         </div>
       ) : null}
 
       <p className="text-xs text-ivory/55">
-        Need a partnership conversation instead of a future paid grant?{" "}
+        Need volume or a partnership instead?{" "}
         <Link href="/developers/partners" className="text-ember hover:text-ivory">
           Partner with Apogee
-        </Link>
-        . Connect MCP now at{" "}
-        <Link href="/connect" className="text-ember hover:text-ivory">
-          /connect
         </Link>
         .
       </p>
@@ -278,7 +264,7 @@ function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-white/8 py-2">
       <dt className="text-ivory/55">{k}</dt>
-      <dd className="text-right text-ivory">{v}</dd>
+      <dd className="max-w-[60%] text-right text-ivory">{v}</dd>
     </div>
   );
 }

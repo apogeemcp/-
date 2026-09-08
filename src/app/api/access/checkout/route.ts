@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { corsHeaders } from "@/lib/mcp";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createCheckoutQuote } from "@/lib/checkout";
+import { paymentTreasury } from "@/lib/solana-pay";
 import { sessionFromRequest } from "@/lib/session";
-import { sbInsert } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -25,18 +25,14 @@ export async function POST(req: NextRequest) {
       planId: body.planId,
       wallet: session?.address || null,
     });
-    void sbInsert("apogee_product_events", {
-      event: "checkout_attempt",
-      wallet: session?.address || null,
-      meta: { planId: body.planId, state: result.state },
-    });
     return NextResponse.json(
       {
         ...result,
-        warning:
-          "Server prices only. Client-submitted amounts are ignored. This response is not a purchase confirmation.",
+        treasury: paymentTreasury(),
+        assets: ["SOL", "USDC"],
+        warning: "Server prices only. Send SOL or USDC yourself, then confirm with a Solscan link.",
       },
-      { status: 503, headers: { ...corsHeaders, ...limited.headers } },
+      { status: result.ok ? 200 : 503, headers: { ...corsHeaders, ...limited.headers } },
     );
   } catch (e) {
     const status = (e as { status?: number }).status || 500;

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   }
   const [partners, purchases, grants, burns, support, events] = await Promise.all([
     table("apogee_partner_requests?select=id,company,status,created_at,integration_type&order=created_at.desc&limit=50"),
-    table("apogee_mcp_purchases?select=id,status,price_usd,burn_usd,plan_id,created_at&order=created_at.desc&limit=50"),
+    table("apogee_mcp_purchases?select=id,status,price_usd,burn_usd,plan_id,tx_signature,wallet,created_at&order=created_at.desc&limit=50"),
     table("apogee_access_grants?select=id,status,lifetime,expires_at,plan_id&limit=50"),
     table("apogee_burn_records?select=id,status,verified,allocation_usd,burn_tx&limit=50"),
     table("apogee_support_requests?select=id,topic,status,created_at&order=created_at.desc&limit=50"),
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
         totalUsd: confirmedPurchases.reduce((s, p) => s + Number(p.price_usd || 0), 0),
         confirmedPurchases: confirmedPurchases.length,
         quotedOnly: (purchases.rows as Array<{ status?: string }>).filter((p) => p.status === "quoted").length,
-        note: "Quoted rows are not revenue. Confirmed stays 0 until an on-chain verifier exists.",
+        note: "Confirmed = Solana treasury payment verified. Quoted is not revenue. Burns stay pending until you record the burn tx.",
       },
       access: {
         activeRentals: (grants.rows as Array<{ status?: string; lifetime?: boolean }>).filter((g) => g.status === "active" && !g.lifetime).length,

@@ -24,6 +24,7 @@ type Purchase = {
   status: string;
   verification_status: string;
   tx_signature?: string | null;
+  explorerUrl?: string | null;
   created_at: string;
   wallet?: string | null;
 };
@@ -35,6 +36,7 @@ type Burn = {
   buy_tx?: string | null;
   verified: boolean;
   status: string;
+  explorerUrl?: string | null;
   created_at: string;
 };
 
@@ -131,8 +133,10 @@ export function AccessLedger() {
                 <p className="mt-1 font-mono text-gold">${Number(p.price_usd).toLocaleString()}</p>
                 <p className="text-xs text-ivory/60">${Number(p.burn_usd).toLocaleString()} buy &amp; burn · {p.status}</p>
                 <p className="text-xs text-ivory/50">{p.wallet ? shortAddress(p.wallet) : "—"}</p>
-                {p.tx_signature ? (
-                  <p className="mt-1 font-mono text-xs text-ivory/70">tx {p.tx_signature}</p>
+                {p.explorerUrl ? (
+                  <a href={p.explorerUrl} className="mt-1 inline-block text-xs text-ember" target="_blank" rel="noreferrer">
+                    View on Solscan
+                  </a>
                 ) : (
                   <p className="mt-1 text-xs text-ivory/50">No on-chain transaction</p>
                 )}
@@ -163,7 +167,15 @@ export function AccessLedger() {
                     <td className="text-ivory/70">${Number(p.burn_usd).toLocaleString()}</td>
                     <td>{p.status}</td>
                     <td>{p.verification_status}</td>
-                    <td className="text-ivory/50">{p.tx_signature ? "on-chain" : "none"}</td>
+                    <td>
+                      {p.explorerUrl ? (
+                        <a href={p.explorerUrl} className="text-ember" target="_blank" rel="noreferrer">
+                          Solscan
+                        </a>
+                      ) : (
+                        "none"
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -175,8 +187,8 @@ export function AccessLedger() {
       <section>
         <h2 className="font-heading text-2xl text-ivory">Burn history</h2>
         <p className="mt-2 text-sm text-ivory/75">
-          Total verified {MCP_TICKER} burned through this wallet: {verifiedBurns.length} events. Amounts display only when
-          a burn transaction signature is stored.
+          Total verified {MCP_TICKER} burned through this wallet: {verifiedBurns.length} events. Amounts and explorer
+          links display only when a burn transaction signature is stored after we execute buy-and-burn.
         </p>
         {data.burns.length === 0 ? (
           <p className="mt-2 text-sm text-ivory/70">No burn records. Nothing is marked burned.</p>
@@ -189,10 +201,12 @@ export function AccessLedger() {
                 <p className="text-sm text-ivory/70">
                   {b.verified && b.burn_tx ? "VERIFIED" : "Not burned — awaiting a verified transaction"}
                 </p>
-                {b.burn_tx ? (
-                  <p className="mt-1 break-all font-mono text-xs text-gold">{b.burn_tx}</p>
+                {b.explorerUrl ? (
+                  <a href={b.explorerUrl} className="mt-1 inline-block text-xs text-ember" target="_blank" rel="noreferrer">
+                    View on-chain transaction
+                  </a>
                 ) : (
-                  <p className="mt-1 text-xs text-ivory/50">No explorer link — no signature.</p>
+                  <p className="mt-1 text-xs text-ivory/50">No explorer link — no verified burn signature.</p>
                 )}
               </li>
             ))}

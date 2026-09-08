@@ -8,7 +8,7 @@ import Link from "next/link";
 export const metadata = {
   title: "MCP access",
   description:
-    "Apogee MCP is public (auth none). Official USD list prices and a 25% $ORBITX buy-and-burn allocation are published. Checkout is not live until an on-chain verifier exists.",
+    "Buy Apogee MCP access by sending SOL or USDC to the Solana treasury, then paste the Solscan transaction link. 25% is allocated to a manual $ORBITX buy-and-burn.",
 };
 
 export default function AccessPage() {
@@ -19,8 +19,8 @@ export default function AccessPage() {
         <h1 className="mt-2 font-display text-4xl text-ivory sm:text-5xl">Apogee MCP for other products</h1>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ivory/80 sm:text-base">
           You do not need users to visit Apogee. Connect {CANONICAL_MCP} (auth none) and bring search, desk, charts,
-          wallet marks, and listed tools into your own agent, trading UI, or research app. The shop below is the official
-          catalog if paid access ships — it is not a live checkout.
+          wallet marks, and listed tools into your own agent, trading UI, or research app. Paid plans: send SOL or USDC
+          to the treasury, then confirm with the Solscan transaction link.
         </p>
       </header>
 
@@ -39,8 +39,8 @@ export default function AccessPage() {
       <section id="receipts" className="panel rounded-xl p-5">
         <p className="kicker">Receipts</p>
         <p className="mt-2 text-sm text-ivory/75">
-          After a verified purchase, a receipt would list plan, price, access window, 25% buy-and-burn allocation, and
-          an on-chain transaction link. There are no receipts until a payment is confirmed by the backend.
+          After a verified Solscan payment, this page lists plan, price, access window, 25% buy-and-burn allocation, and
+          the payment transaction. Buy-and-burn stays pending until we record that burn.
         </p>
       </section>
 

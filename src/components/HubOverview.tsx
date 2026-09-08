@@ -81,9 +81,8 @@ export function HubOverview() {
       ) : null}
 
       <p className="text-sm leading-relaxed text-ivory/75">
-        Connect agents at <span className="font-mono text-gold">{CANONICAL_MCP}</span>. Purchased access, receipts, and
-        burn history stay empty until a payment verifier exists. That is intentional — this dashboard does not invent
-        ACTIVE 30-day grants.
+        Connect agents at <span className="font-mono text-gold">{CANONICAL_MCP}</span>. Paid grants appear after a
+        verified SOL/USDC payment to the treasury. $ORBITX burns stay pending until that burn transaction is recorded.
       </p>
       <div className="flex flex-wrap gap-2">
         <Link href="/developers/access" className="btn-primary">

@@ -9,6 +9,8 @@ export function AdminHub() {
   const [data, setData] = useState<Hub | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [burnId, setBurnId] = useState("");
+  const [burnLink, setBurnLink] = useState("");
 
   async function load(e: React.FormEvent) {
     e.preventDefault();
@@ -32,6 +34,11 @@ export function AdminHub() {
     }
   }
 
+  async function reload() {
+    const form = document.getElementById("admin-load") as HTMLFormElement | null;
+    form?.requestSubmit();
+  }
+
   async function setPartnerStatus(id: string, status: string) {
     const res = await fetch("/api/admin/partners", {
       method: "PATCH",
@@ -39,18 +46,44 @@ export function AdminHub() {
       body: JSON.stringify({ id, status }),
     });
     const json = await res.json();
-    if (!res.ok) {
-      setError(json.error || "Update failed");
-      return;
+    if (!res.ok) setError(json.error || "Update failed");
+    else await reload();
+  }
+
+  async function activate(id: string) {
+    const res = await fetch("/api/admin/payments", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-apogee-admin": secret },
+      body: JSON.stringify({ id, action: "activate" }),
+    });
+    const json = await res.json();
+    if (!res.ok) setError(json.error || "Update failed");
+    else await reload();
+  }
+
+  async function recordBurn(e: React.FormEvent) {
+    e.preventDefault();
+    const res = await fetch("/api/admin/payments", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-apogee-admin": secret },
+      body: JSON.stringify({ id: burnId, action: "record_burn", solscan: burnLink }),
+    });
+    const json = await res.json();
+    if (!res.ok) setError(json.error || "Burn not recorded");
+    else {
+      setBurnId("");
+      setBurnLink("");
+      await reload();
     }
-    const form = document.getElementById("admin-load") as HTMLFormElement | null;
-    form?.requestSubmit();
   }
 
   const revenue = data?.revenue as { totalUsd?: number; confirmedPurchases?: number; quotedOnly?: number; note?: string } | undefined;
   const access = data?.access as { activeRentals?: number; lifetime?: number; expiring?: number } | undefined;
   const orbitx = data?.orbitx as { burnedVerified?: number; pending?: number; failed?: number; note?: string } | undefined;
   const partners = data?.partners as { pending?: number; rows?: Array<{ id: string; company: string; status: string; created_at: string }> } | undefined;
+  const payments = data?.payments as {
+    rows?: Array<{ id: string; status: string; price_usd: number; plan_id: string; tx_signature?: string; created_at: string }>;
+  } | undefined;
   const usage = data?.usage as { ok?: boolean; rows?: Array<{ tool: string; calls: number }> } | undefined;
 
   return (
@@ -79,6 +112,44 @@ export function AdminHub() {
           </div>
           <p className="text-xs text-ivory/55">{revenue?.note}</p>
           <p className="text-xs text-ivory/55">{orbitx?.note}</p>
+          <section className="panel rounded-xl p-5">
+            <p className="kicker">Payments</p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {(payments?.rows || []).map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 py-2">
+                  <span className="min-w-0">
+                    {p.plan_id} · ${Number(p.price_usd).toLocaleString()} · {p.status}
+                    {p.tx_signature ? (
+                      <a
+                        className="ml-2 text-ember"
+                        href={`https://solscan.io/tx/${p.tx_signature}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Solscan
+                      </a>
+                    ) : null}
+                  </span>
+                  {p.status !== "confirmed" ? (
+                    <button type="button" className="btn-ghost text-xs" onClick={() => activate(p.id)}>
+                      Grant access
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+              {!payments?.rows?.length ? <li className="text-ivory/60">No payment rows.</li> : null}
+            </ul>
+            <form onSubmit={recordBurn} className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+              <input className="field rounded-xl" placeholder="Purchase id" value={burnId} onChange={(e) => setBurnId(e.target.value)} />
+              <input className="field rounded-xl" placeholder="Burn Solscan URL" value={burnLink} onChange={(e) => setBurnLink(e.target.value)} />
+              <button type="submit" className="btn-primary">
+                Record burn
+              </button>
+            </form>
+            <p className="mt-2 text-xs text-ivory/55">
+              Buy-and-burn is manual. Record the Solscan burn tx after you execute it. It will not show as Burned without a real signature.
+            </p>
+          </section>
           <section className="panel rounded-xl p-5">
             <p className="kicker">Partnerships</p>
             <ul className="mt-3 space-y-2 text-sm">
@@ -115,7 +186,7 @@ export function AdminHub() {
         </>
       ) : (
         <p className="text-sm text-ivory/70">
-          Admin visibility is gated by a server secret. Revenue and burn totals stay at zero unless confirmed rows exist.
+          Admin visibility is gated by a server secret. Burns stay unverified until you paste a real Solscan burn tx.
         </p>
       )}
     </div>

@@ -9,9 +9,11 @@ import {
   publicCatalogPayload,
   publishedPlans,
   remainingCopy,
+  treasuryAddress,
 } from "../src/lib/access";
-import { lookupPlanOrThrow, rejectUnverifiedConfirm } from "../src/lib/checkout";
+import { lookupPlanOrThrow } from "../src/lib/checkout";
 import { buildSiweMessage } from "../src/lib/session";
+import { parseSolscanInput, SOLANA_TREASURY, solscanTxUrl } from "../src/lib/solana-pay";
 
 describe("MCP access catalog", () => {
   it("publishes the five official USD plans", () => {
@@ -40,13 +42,15 @@ describe("MCP access catalog", () => {
     expect(remainingCopy("2026-09-08T00:00:00.000Z", start.getTime())).toBe("EXPIRED");
   });
 
-  it("does not claim live paid gating or automated burns", () => {
+  it("publishes the Solana treasury and keeps burns manual", () => {
     expect(MCP_ACCESS.liveAuth).toBe("none");
     expect(MCP_ACCESS.liveStatus).toBe("public");
-    expect(MCP_ACCESS.burnProcess).toMatch(/not automated/i);
-    expect(checkoutBlocker()?.state).toBe("unavailable");
+    expect(MCP_ACCESS.burnProcess).toMatch(/not automatic/i);
+    expect(checkoutBlocker()).toBeNull();
+    expect(treasuryAddress()).toBe(SOLANA_TREASURY);
     const catalog = publicCatalogPayload();
-    expect(catalog.live.checkout).toBe("unavailable");
+    expect(catalog.live.checkout).toBe("manual_solana");
+    expect(catalog.treasury).toBe(SOLANA_TREASURY);
     expect(catalog.plans).toHaveLength(5);
     expect(catalog.plans[2].burnUsd).toBe(125);
   });
@@ -57,11 +61,21 @@ describe("checkout integrity", () => {
     expect(lookupPlanOrThrow("week-1").priceUsd).toBe(500);
     expect(() => lookupPlanOrThrow("invented")).toThrow(/unknown plan/i);
   });
+});
 
-  it("never confirms a client-submitted transaction", () => {
-    const rejected = rejectUnverifiedConfirm();
-    expect(rejected.ok).toBe(false);
-    expect(rejected.state).toBe("unavailable");
+describe("Solscan confirmation", () => {
+  it("accepts solscan.io/tx links and raw signatures", () => {
+    const sig = "4".repeat(88);
+    expect(parseSolscanInput(`https://solscan.io/tx/${sig}`)).toEqual({ ok: true, signature: sig });
+    expect(parseSolscanInput(`https://solscan.io/tx/${sig}?cluster=mainnet`)).toEqual({ ok: true, signature: sig });
+    expect(parseSolscanInput(sig)).toEqual({ ok: true, signature: sig });
+    expect(solscanTxUrl(sig)).toBe(`https://solscan.io/tx/${sig}`);
+  });
+
+  it("rejects non-solscan URLs and junk", () => {
+    expect(parseSolscanInput("https://example.com/tx/abc").ok).toBe(false);
+    expect(parseSolscanInput("https://solscan.io/account/8PXz").ok).toBe(false);
+    expect(parseSolscanInput("not-a-sig").ok).toBe(false);
   });
 });
 

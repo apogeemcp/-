@@ -4,6 +4,7 @@ import { checkRateLimit } from "@/lib/ratelimit";
 import { gatingEnabled, MCP_ACCESS, paymentsEnabled } from "@/lib/access";
 import { loadBurns, loadGrants, loadPurchases } from "@/lib/checkout";
 import { sessionFromRequest } from "@/lib/session";
+import { solscanTxUrl } from "@/lib/solana-pay";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +29,21 @@ export async function GET(req: NextRequest) {
         { ok: true, rows: [] as unknown[], error: undefined },
       ];
 
-  const verifiedBurns = (burns.rows || []).filter((row) => {
-    const r = row as { verified?: boolean; burn_tx?: string };
-    return r.verified === true && Boolean(r.burn_tx);
+  const purchasesWithLinks = (purchases.rows || []).map((row) => {
+    const p = row as { tx_signature?: string | null; chain?: string };
+    return {
+      ...p,
+      explorerUrl: p.tx_signature && p.chain === "solana" ? solscanTxUrl(p.tx_signature) : null,
+    };
   });
+  const burnsWithLinks = (burns.rows || []).map((row) => {
+    const b = row as { burn_tx?: string | null; verified?: boolean; chain?: string };
+    return {
+      ...b,
+      explorerUrl: b.verified && b.burn_tx ? solscanTxUrl(b.burn_tx) : null,
+    };
+  });
+  const verifiedBurns = burnsWithLinks.filter((r) => r.verified === true && Boolean(r.burn_tx));
 
   return NextResponse.json(
     {
@@ -46,17 +58,17 @@ export async function GET(req: NextRequest) {
       },
       purchasedAccess: (grants.rows || []).filter((g) => (g as { status?: string }).status === "active"),
       grants: grants.rows,
-      purchases: purchases.rows,
-      burns: burns.rows,
+      purchases: purchasesWithLinks,
+      burns: burnsWithLinks,
       totals: {
-        purchases: (purchases.rows || []).length,
+        purchases: purchasesWithLinks.length,
         activeGrants: (grants.rows || []).filter((g) => (g as { status?: string }).status === "active").length,
         verifiedBurnEvents: verifiedBurns.length,
         verifiedBurnAmount: 0,
       },
       note: wallet
-        ? "Purchased MCP grants stay empty until a verified payment activates one. Live MCP remains public (auth none)."
-        : "Connect and sign with Phantom (Ethereum mode) to load wallet-scoped quotes. MCP itself does not require a session.",
+        ? "Paid grants appear after a Solscan payment to the treasury is verified. $ORBITX burns stay pending until we record the burn transaction. Live MCP remains public (auth none) unless gating is on."
+        : "Submit a Solscan payment to unlock a paid grant. Sign in to attach it to this profile. MCP itself does not require a session.",
       errors: {
         purchases: purchases.error,
         grants: grants.error,

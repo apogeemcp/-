@@ -4,12 +4,14 @@
  * List prices are backend-configurable (`APOGEE_ACCESS_PLANS` JSON).
  * Allocation is always 25% buy-and-burn / 75% ops of the USD list price.
  *
- * Live product: MCP `auth: none`. Purchased grants, payment capture, and
- * verified $ORBITX burns are NOT active until treasury + verifier exist.
- * Do not treat a frontend POST as proof of payment or access.
+ * Payments: user sends SOL or USDC to the Solana treasury, then submits a
+ * Solscan tx URL. Access activates after the backend sees that tx credit the
+ * treasury. $ORBITX buy-and-burn is done manually afterwards — never marked
+ * Burned until a burn signature is stored.
  */
 
 import { PROJECT_CA } from "./site";
+import { paymentTreasury, SOLANA_TREASURY } from "./solana-pay";
 
 export const BURN_BPS = 2500;
 export const OPS_BPS = 7500;
@@ -129,20 +131,15 @@ export function quotePlan(plan: AccessPlan): PlanQuote {
 }
 
 export function paymentsEnabled(): boolean {
-  return process.env.APOGEE_PAYMENTS === "1" && Boolean(process.env.APOGEE_TREASURY_ADDRESS?.trim());
+  return process.env.APOGEE_PAYMENTS !== "0";
 }
 
 export function gatingEnabled(): boolean {
   return process.env.APOGEE_MCP_GATING === "1";
 }
 
-export function burnVerifierEnabled(): boolean {
-  return Boolean(process.env.APOGEE_BURN_VERIFIER?.trim());
-}
-
-export function treasuryAddress(): string | null {
-  const v = process.env.APOGEE_TREASURY_ADDRESS?.trim();
-  return v || null;
+export function treasuryAddress(): string {
+  return paymentTreasury();
 }
 
 export function expiresAtIso(plan: AccessPlan, from = new Date()): string | null {
@@ -220,9 +217,11 @@ export const MCP_ACCESS = {
   projectContract: PROJECT_CA,
   burnBps: BURN_BPS,
   opsBps: OPS_BPS,
-  note: "MCP is public (auth none). The USD catalog below is the official list price if paid access ships. Checkout cannot complete until a treasury address and on-chain verifier exist. Burned totals stay at zero until a verified burn signature is stored.",
+  treasury: SOLANA_TREASURY,
+  assets: ["SOL", "USDC"] as const,
+  note: "MCP is public (auth none). Paid plans are unlocked by sending SOL or USDC to the Solana treasury, then pasting the Solscan transaction link. Do not pay any other address. $ORBITX burns are executed manually after payment and stay unverified until that burn transaction is recorded.",
   burnProcess:
-    "Buy-and-burn is not automated. After a purchase is confirmed on-chain, 25% of the USD list price is allocated to buying $ORBITX and burning it. The UI may say Burned only after a verified transaction signature is recorded. Until a treasury address and verifier are configured, purchases cannot complete and burn totals remain zero.",
+    "After payment is confirmed, 25% of the USD list price is allocated to buying and burning $ORBITX on our side. That buy-and-burn is not automatic. The UI says Burned only after a verified burn transaction signature is stored.",
 } as const;
 
 export type PurchaseState =
@@ -245,21 +244,14 @@ export type PurchaseState =
   | "insufficient_balance"
   | "transaction_not_found"
   | "burn_verification_failed"
+  | "pending_review"
   | "unavailable";
 
 export function checkoutBlocker(): { state: "unavailable"; reason: string } | null {
   if (!paymentsEnabled()) {
     return {
       state: "unavailable",
-      reason:
-        "Payment rail is not configured (APOGEE_PAYMENTS and APOGEE_TREASURY_ADDRESS). List prices are shown for transparency. No funds can be collected and no access grant can be activated from this site.",
-    };
-  }
-  if (!burnVerifierEnabled()) {
-    return {
-      state: "unavailable",
-      reason:
-        "A treasury address is set but the on-chain payment and burn verifier is not deployed (APOGEE_BURN_VERIFIER). Checkout will not collect payment or mark burns as verified.",
+      reason: "Manual SOL/USDC payments are disabled on this host.",
     };
   }
   return null;
@@ -275,14 +267,17 @@ export function publicCatalogPayload() {
       status: MCP_ACCESS.liveStatus,
       gating: gatingEnabled(),
       payments: paymentsEnabled(),
-      burnVerifier: burnVerifierEnabled(),
-      checkout: blocker ? "unavailable" : "configured",
+      checkout: blocker ? "unavailable" : "manual_solana",
+      assets: MCP_ACCESS.assets,
     },
+    treasury: treasuryAddress(),
     burnBps: BURN_BPS,
     opsBps: OPS_BPS,
     tokenTicker: MCP_ACCESS.tokenTicker,
     projectContract: MCP_ACCESS.projectContract,
     burnProcess: MCP_ACCESS.burnProcess,
+    paymentCopy:
+      "Send SOL or USDC on Solana to the treasury, then paste the Solscan transaction link. Access activates after that payment is verified. Buy-and-burn happens afterwards on our side.",
     includes: PLAN_INCLUDES,
     toolGroups: TOOL_GROUPS,
     toolGroupNote: "Reserved for future per-tool permissions. Live MCP does not gate tools by group.",

@@ -141,7 +141,7 @@ export const FAQ = [
       },
       {
         q: "Do I need $ORBITX to use MCP?",
-        a: "No. Live MCP is auth none. /developers/access publishes official USD list prices and a 25% $ORBITX buy-and-burn allocation. Checkout and burns are not live; the shop will not confirm a purchase or show a burn total without a verified on-chain signature.",
+        a: "No. Live MCP is auth none. Optional paid plans: send SOL or USDC to the published Solana treasury, then paste the Solscan tx link. 25% is allocated to a manual $ORBITX buy-and-burn after payment. Do not pay any other address.",
       },
       {
         q: "Can I embed Apogee in my own product?",
