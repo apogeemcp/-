@@ -103,7 +103,7 @@ body {
   }
 
   .arch li {
-    @apply relative border-b border-white/8 px-4 py-3 font-mono text-xs text-ivory/85 last:border-b-0;
+    @apply relative border-b border-white/10 px-4 py-3 font-mono text-xs text-ivory/85 last:border-b-0;
   }
 
   .arch li::before {

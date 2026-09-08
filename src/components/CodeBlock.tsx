@@ -14,7 +14,7 @@ export function CodeBlock({
   const [copied, setCopied] = useState(false);
   return (
     <div className="overflow-hidden rounded-xl border border-white/10 bg-black/55">
-      <div className="flex items-center justify-between gap-3 border-b border-white/8 px-3 py-2">
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
         <p className="truncate font-mono text-[10px] uppercase tracking-[0.18em] text-ivory/45">
           {label || language}
         </p>
