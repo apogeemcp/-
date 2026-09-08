@@ -217,22 +217,195 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "apogee_status",
-    description: "Health check for Apogee MCP. No auth.",
+    description: "Health check for Apogee MCP. Reports 3000 catalog operations, chain stats, and the live MCP URL.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "search_catalog",
+    description: "Search all 3000 Robinhood Chain catalog operations by name or topic (wallet, analytics, pons, stocks).",
+    inputSchema: {
+      type: "object",
+      properties: { query: { type: "string" }, limit: { type: "number" } },
+      required: ["query"],
+    },
+  },
+  {
+    name: "run_tool",
+    description: "Invoke any of the 3000 catalog operations by exact name, including aliases like scan_NVDA or volume_1h.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Catalog tool name" },
+        arguments: { type: "object" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "list_catalog_page",
+    description: "Page through the 3000-operation catalog.",
+    inputSchema: {
+      type: "object",
+      properties: { offset: { type: "number" }, limit: { type: "number" } },
+    },
+  },
+  {
+    name: "get_wallet_txs",
+    description: "Explorer native + ERC-20 transfers for a Robinhood Chain wallet.",
+    inputSchema: {
+      type: "object",
+      properties: { address: { type: "string" }, page: { type: "number" }, offset: { type: "number" } },
+      required: ["address"],
+    },
+  },
+  {
+    name: "get_wallet_tokens",
+    description: "ETH plus watched USDG/WETH/Stock Token balances for a wallet.",
+    inputSchema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] },
+  },
+  {
+    name: "get_wallet_pnl",
+    description: "Mark-to-market wallet equity on Robinhood Chain using DexScreener USD prices.",
+    inputSchema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] },
+  },
+  {
+    name: "track_wallet",
+    description: "Full wallet tracker: balances, PnL, recent flow. Read-only.",
+    inputSchema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] },
+  },
+  {
+    name: "get_wallet_flow",
+    description: "In/out transfer counts and counterparties for a wallet.",
+    inputSchema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] },
+  },
+  {
+    name: "get_token_analytics",
+    description: "Volume, txns, liquidity, and change for a token over 5m/1h/6h/24h.",
+    inputSchema: {
+      type: "object",
+      properties: { query: { type: "string" }, window: { type: "string" } },
+      required: ["query"],
+    },
+  },
+  {
+    name: "get_top_traders",
+    description: "Top flow wallets for a token from recent explorer transfers.",
+    inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+  },
+  {
+    name: "get_smart_money",
+    description: "Repeat-buy wallets in the recent transfer window (smart-money proxy).",
+    inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+  },
+  {
+    name: "get_first_buyers",
+    description: "Earliest explorer token transfers for a Robinhood Chain token.",
+    inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+  },
+  {
+    name: "list_boosted",
+    description: "Latest DexScreener boosted tokens on Robinhood Chain.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "get_gas_oracle",
+    description: "Live gas price on Robinhood Chain.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "get_block",
+    description: "Fetch a block by number or latest.",
+    inputSchema: { type: "object", properties: { id: { type: "string" } } },
+  },
+  {
+    name: "get_contract",
+    description: "ERC-20 metadata and market count for a contract.",
+    inputSchema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] },
+  },
+  {
+    name: "compare_tokens",
+    description: "Side-by-side analytics for two tickers or addresses.",
+    inputSchema: {
+      type: "object",
+      properties: { a: { type: "string" }, b: { type: "string" } },
+      required: ["a", "b"],
+    },
+  },
+  {
+    name: "get_market_overview",
+    description: "TVL, gas, and trending pools snapshot.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "preview_pons_launch",
+    description: "Read pons v2 launch fee, economics pin, and factory status. Does not send a transaction.",
+    inputSchema: {
+      type: "object",
+      properties: { name: { type: "string" }, symbol: { type: "string" }, launchConfigId: { type: "number" } },
+    },
+  },
+  {
+    name: "prepare_pons_launch",
+    description:
+      "Build an unsigned pons v2 launchToken transaction for Phantom (ETH) on Robinhood Chain. User must sign. Apogee never holds keys.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        symbol: { type: "string" },
+        description: { type: "string" },
+        logo: { type: "string" },
+        twitter: { type: "string" },
+        telegram: { type: "string" },
+        website: { type: "string" },
+        creatorFeeRecipient: { type: "string" },
+        creatorTaxBps: { type: "number" },
+        buybackEnabled: { type: "boolean" },
+        launchConfigId: { type: "number" },
+      },
+      required: ["name", "symbol"],
+    },
+  },
+  {
+    name: "prepare_pons_buy",
+    description: "Indicative pons buy helper plus the pons app URL. Does not broadcast.",
+    inputSchema: {
+      type: "object",
+      properties: { address: { type: "string" }, ethAmount: { type: "string" } },
+      required: ["address"],
+    },
+  },
+  {
+    name: "get_curve_quote",
+    description: "Bonding-curve / graduation state for a pons token.",
+    inputSchema: { type: "object", properties: { address: { type: "string" } }, required: ["address"] },
+  },
+  {
+    name: "add_robinhood_chain",
+    description: "wallet_addEthereumChain params so Phantom or MetaMask can add Robinhood Chain (4663).",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "get_mcp_info",
+    description: "Canonical live MCP URL https://apogeemcp.digital/api/mcp and one-click install targets.",
     inputSchema: { type: "object", properties: {} },
   },
 ];
 
-export const MCP_INSTRUCTIONS = `You are connected to Apogee, the Robinhood Chain intel MCP (Search / Chart / Desk / Launch).
+export const MCP_INSTRUCTIONS = `You are connected to Apogee, the Robinhood Chain intel MCP (Search / Chart / Desk / Launch / Track).
+Canonical URL: https://apogeemcp.digital/api/mcp (alias /mcp). Auth: none.
+The catalog has 3000 Robinhood Chain operations. tools/list returns the primary tools; search_catalog + run_tool invoke any alias (scan_NVDA, volume_1h, wallet_pnl_1, pons_curve_v2, …).
 Rules:
 - This chain is EIP-155 4663. DexScreener/GeckoTerminal slug is "robinhood", never 4663.
 - Resolve tokens by contract. Tickers collide — NVDA memecoins are not the NVIDIA Stock Token.
 - Canonical Stock Tokens come from list_stock_tokens / RHJ. get_stock_quote shows oracle vs DEX premium.
-- Never ask for a seed phrase or private key. All tools are read-only.
-- Do not claim a swap executed. get_swap_quote is indicative only.
+- Never ask for a seed phrase or private key.
+- Wallet tracking (track_wallet, get_wallet_pnl, get_wallet_txs) is read-only.
+- prepare_pons_launch returns an unsigned tx for the user to sign in Phantom (ethereum provider) after wallet_addEthereumChain for 4663. Do not claim a launch or swap executed unless the user reports a tx hash.
 - Stock Tokens may not be offered to US/Canada/UK/Switzerland persons.
-- Prefer scan_token before size, get_desk for a market snapshot, list_launches / list_pons_launches for new tokens.
+- Prefer scan_token before size, get_desk for a market snapshot, list_launches / list_pons_launches for new tokens, track_wallet for an address.
 pons (write the name in lowercase; link https://www.ponsfamily.com/launchpad):
 - Apogee indexes pons on-chain. It is not operated by pons and does not imply partnership.
-- V1: Uniswap V3 vs WETH only, 1% fee, 1e9 supply, no bonding curve, no migration. Graduation = paired WETH vs threshold (default 4.2 ETH). Trading stays in the same pool.
-- V2 (live factory 0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e): bonding curve then Uniswap V4. pairToken 0x0 = native ETH. phase 0 = curve, 2 = PoolCreated. Names/symbols can be copied — always check the token address.
-- Graduation is not a quality signal. Use get_pons_token / get_pons_graduation for a specific address.`;
+- V1: Uniswap V3 vs WETH only, 1% fee, 1e9 supply, no bonding curve, no migration. Graduation = paired WETH vs threshold (default 4.2 ETH).
+- V2 (live factory 0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e): bonding curve then Uniswap V4. pairToken 0x0 = native ETH. Launch via prepare_pons_launch + Phantom.
+- Graduation is not a quality signal.`;

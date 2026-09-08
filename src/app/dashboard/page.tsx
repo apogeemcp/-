@@ -5,6 +5,7 @@ import { DeskLive } from "@/components/DeskLive";
 import { ScanBox } from "@/components/ScanBox";
 import { SaturnBackdrop } from "@/components/SaturnBackdrop";
 import { TOOLS } from "@/lib/tools";
+import { PRODUCT } from "@/lib/site";
 
 export default function DashboardPage() {
   return (
@@ -16,12 +17,12 @@ export default function DashboardPage() {
             <p className="text-[11px] uppercase tracking-[0.4em] text-ember">3D desk · zero auth · pons-indexed</p>
             <h1 className="mt-2 font-display text-4xl text-ivory sm:text-6xl">Mission control</h1>
             <p className="mt-3 max-w-2xl text-ivory/70">
-              Configure Apogee once. Every connected agent inherits Robinhood Chain tools: token search, OG-style
-              scans, candles, stock-token quotes, and live pons v1/v2 launches.
+              Configure Apogee once at <span className="font-mono text-gold">apogeemcp.digital/api/mcp</span>. {PRODUCT.toolCount}{" "}
+              Robinhood Chain operations: scans, candles, wallet tracking, analytics, and pons launches via Phantom.
             </p>
           </div>
           <Image
-            src="/brand/logo.png?v=3"
+            src="/brand/logo.png?v=4"
             alt="Apogee"
             width={420}
             height={236}
@@ -34,7 +35,9 @@ export default function DashboardPage() {
         </Suspense>
         <DeskLive />
         <section className="glass rounded-3xl p-6">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-gold">{TOOLS.length} MCP tools</p>
+          <p className="text-[10px] uppercase tracking-[0.24em] text-gold">
+            {PRODUCT.toolCount} catalog ops · {TOOLS.length} listed tools
+          </p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {TOOLS.map((t) => (
               <div key={t.name} className="rounded-xl border border-white/5 px-3 py-3">

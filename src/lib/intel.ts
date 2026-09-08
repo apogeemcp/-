@@ -2,6 +2,26 @@ import { CHAIN, ENDPOINTS, TOKENS, isAddress, dexTokenUrl, explorerToken, explor
 import { fetchJson, erc20Meta, erc20Balance, nativeBalance, latestBlock, gasPriceWei, getTransaction, formatUnits } from "./rpc";
 import { computeApogeeScore, momentumScore } from "./score";
 import { getPonsGraduation, getPonsProtocol, getPonsToken, listPonsLaunches, PONS } from "./pons";
+import {
+  addRobinhoodChainParams,
+  compareTokens,
+  getBlockTool,
+  getContractMeta,
+  getFirstBuyers,
+  getGasOracle,
+  getMarketOverview,
+  getSmartMoney,
+  getTokenAnalytics,
+  getTopTraders,
+  getWalletFlow,
+  getWalletPnl,
+  getWalletTokens,
+  getWalletTxs,
+  trackWallet,
+} from "./track";
+import { getCurveQuote, getMcpInfo, preparePonsBuy, preparePonsLaunch, previewPonsLaunch } from "./launch";
+import { CATALOG_SIZE } from "./catalog";
+import { mcpHttpUrl } from "./site";
 
 export type DsPair = {
   chainId?: string;
@@ -669,13 +689,61 @@ export const toolImpl = {
     return pair ? { ok: true, pair: tokenFromPair(pair) } : { ok: false, error: "Pair not found on Robinhood Chain." };
   },
   get_corporate_actions: (args: Record<string, unknown>) => corporateActions(Number(args.limit || 25)),
+  get_wallet_txs: (args: Record<string, unknown>) =>
+    getWalletTxs(String(args.address || ""), Number(args.page || 1), Number(args.offset || args.limit || 40)),
+  get_wallet_tokens: (args: Record<string, unknown>) => getWalletTokens(String(args.address || "")),
+  get_wallet_pnl: (args: Record<string, unknown>) => getWalletPnl(String(args.address || "")),
+  track_wallet: (args: Record<string, unknown>) => trackWallet(String(args.address || "")),
+  get_wallet_flow: (args: Record<string, unknown>) => getWalletFlow(String(args.address || "")),
+  get_token_analytics: (args: Record<string, unknown>) =>
+    getTokenAnalytics(String(args.query || args.address || args.symbol || ""), String(args.window || args.duration || "24h")),
+  get_volume_profile: (args: Record<string, unknown>) =>
+    getTokenAnalytics(String(args.query || args.address || ""), String(args.window || "24h")),
+  get_top_traders: (args: Record<string, unknown>) => getTopTraders(String(args.query || args.address || "")),
+  get_smart_money: (args: Record<string, unknown>) => getSmartMoney(String(args.query || args.address || "")),
+  get_first_buyers: (args: Record<string, unknown>) => getFirstBuyers(String(args.query || args.address || "")),
+  get_dev_activity: (args: Record<string, unknown>) => getFirstBuyers(String(args.query || args.address || "")),
+  list_boosted: () => boostedTokens(),
+  get_gas_oracle: () => getGasOracle(),
+  get_block: (args: Record<string, unknown>) => getBlockTool(args.id ? String(args.id) : undefined),
+  get_contract: (args: Record<string, unknown>) => getContractMeta(String(args.address || "")),
+  compare_tokens: (args: Record<string, unknown>) =>
+    compareTokens(String(args.a || args.left || ""), String(args.b || args.right || "NVDA")),
+  get_market_overview: () => getMarketOverview(),
+  preview_pons_launch: (args: Record<string, unknown>) =>
+    previewPonsLaunch({
+      name: String(args.name || "Token"),
+      symbol: String(args.symbol || "TOKEN"),
+      launchConfigId: args.launchConfigId ? Number(args.launchConfigId) : 0,
+    }),
+  prepare_pons_launch: (args: Record<string, unknown>) =>
+    preparePonsLaunch({
+      name: String(args.name || ""),
+      symbol: String(args.symbol || ""),
+      description: args.description ? String(args.description) : undefined,
+      logo: args.logo ? String(args.logo) : undefined,
+      twitter: args.twitter ? String(args.twitter) : undefined,
+      telegram: args.telegram ? String(args.telegram) : undefined,
+      website: args.website ? String(args.website) : undefined,
+      creatorFeeRecipient: args.creatorFeeRecipient ? String(args.creatorFeeRecipient) : undefined,
+      creatorTaxBps: args.creatorTaxBps != null ? Number(args.creatorTaxBps) : undefined,
+      buybackEnabled: args.buybackEnabled == null ? true : Boolean(args.buybackEnabled),
+      launchConfigId: args.launchConfigId != null ? Number(args.launchConfigId) : 0,
+    }),
+  prepare_pons_buy: (args: Record<string, unknown>) =>
+    preparePonsBuy(String(args.address || args.token || ""), args.ethAmount ? String(args.ethAmount) : undefined),
+  get_curve_quote: (args: Record<string, unknown>) => getCurveQuote(String(args.address || args.token || "")),
+  add_robinhood_chain: async () => ({ ok: true, method: "wallet_addEthereumChain", params: [addRobinhoodChainParams] }),
+  get_mcp_info: () => getMcpInfo(),
   apogee_status: async () => {
     const stats = await getChainStats();
     return {
       ok: true,
       product: "Apogee MCP",
-      version: "1.1.0",
+      version: "2.0.0",
       auth: "none",
+      url: mcpHttpUrl(),
+      tools: { listed: Object.keys(toolImpl).length, catalog: CATALOG_SIZE },
       pons: { app: PONS.app, docs: PONS.docs },
       ...stats,
     };

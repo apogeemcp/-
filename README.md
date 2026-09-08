@@ -1,44 +1,44 @@
 # Apogee MCP
 
-Robinhood Chain intel for agents. **Search. Chart. Desk. Launch.**
+Robinhood Chain intel for agents. **Search. Chart. Desk. Launch. Track.**
 
-Apogee is the Robinhood Chain counterpart to an OrbitX / OG Scan MCP: the same agent surface — token search, composite scans, candles, a trading desk, and launch feed — rebuilt for chain ID **4663**.
-
-No login. Add the MCP URL to Cursor, Claude, ChatGPT, Windsurf, Gemini, Codex, or VS Code and use it.
+3000 catalog operations for chain ID **4663**. Wallet tracking, analytics, Stock Tokens, and pons launches signed in **Phantom** (Ethereum mode).
 
 ## MCP
 
-Website (after deploy):
+Canonical live URL (no auth):
 
 ```
-https://<your-host>/api/mcp
+https://apogeemcp.digital/api/mcp
 ```
 
-Hosted Supabase (no auth):
+Alias: `https://apogeemcp.digital/mcp`
 
-```
-https://paxtohwiycuhwmlziwrr.supabase.co/functions/v1/apogee-mcp
-```
-
-Cursor example:
+One-click: [apogeemcp.digital/connect](https://apogeemcp.digital/connect) — Add to Cursor, Claude, ChatGPT, or Grok.
 
 ```json
 {
   "mcpServers": {
     "apogee": {
-      "url": "https://<your-host>/api/mcp"
+      "url": "https://apogeemcp.digital/api/mcp"
     }
   }
 }
 ```
 
-REST mirror: `GET /api/v1/<tool>` or `POST /api/v1` with `{ "tool": "scan_token", "arguments": { "query": "NVDA" } }`.
+REST: `GET /api/v1/<tool>` including aliases like `scan_NVDA` or `volume_1h`.
 
-## Tools
+## Product
 
-`search_token` `scan_token` `get_token` `get_chart` `get_desk` `list_trending` `list_launches` `list_top_pools` `list_stock_tokens` `get_stock_quote` `get_holders` `get_wallet` `get_chain_stats` `get_transaction` `get_safety` `verify_token` `get_swap_quote` `get_pair` `get_corporate_actions` `apogee_status`
+- `/connect` — one-click MCP install
+- `/orbit` — chat + prepare pons launch + Phantom sign
+- `/wallet` — track any 0x or the connected Phantom
+- `/analytics` — volume, flow, smart-money proxy
+- `/launches` — on-chain pons index
 
-Ticker collisions are real on this chain. Always resolve by contract. Canonical Stock Tokens come from [RHJ `/assets`](https://api.robinhood.com/rhj/assets).
+Never paste a seed. `prepare_pons_launch` returns an unsigned tx.
+
+Write **pons** lowercase. Apogee is not operated by pons or Robinhood.
 
 ## Develop
 
@@ -48,18 +48,8 @@ npm test
 npm run dev
 ```
 
-Open `http://localhost:3000/dashboard`.
-
 ## Vercel
 
-Git deploys are linked to the `apogeemcp.digital` project. This is a **Next.js 15** app — `vercel.json` pins `framework: "nextjs"` so Vercel does not use the Vite/`dist` preset from the empty `main` import.
+Next.js 15. `vercel.json` pins `framework: "nextjs"`.
 
-Public MCP (no auth): `https://<host>/api/mcp` and `https://<host>/mcp`.
-
-## Stack
-
-- Next.js 15 app (3D Saturn desk, legal pages, MCP HTTP)
-- Supabase Edge Functions (`apogee-mcp`, `apogee-api`) on the Degen project
-- Public RH RPC, DexScreener, GeckoTerminal, DefiLlama, RHJ
-
-Not affiliated with Robinhood Markets, Inc. Stock Tokens may be restricted for US/Canada/UK/Switzerland persons. Read-only. No keys. No signing.
+Not affiliated with Robinhood Markets, Inc. Stock Tokens may be restricted for US/Canada/UK/Switzerland persons.

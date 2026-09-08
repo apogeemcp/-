@@ -6,7 +6,7 @@ export function BrandMark({ size = 44, wordmark = true }: { size?: number; wordm
     <Link href="/" className="group flex items-center gap-3">
       <span className="relative shrink-0 overflow-hidden rounded-full ring-1 ring-gold/50 group-hover:ring-ember" style={{ width: size, height: size }}>
         <Image
-          src="/brand/icon.png?v=3"
+          src="/brand/icon.png?v=4"
           alt="Apogee"
           width={size * 2}
           height={size * 2}

@@ -1,8 +1,8 @@
 import { TOOLS, MCP_INSTRUCTIONS } from "./tools";
-import { toolImpl, type ToolName } from "./intel";
+import { dispatchTool } from "./dispatch";
 
 export const MCP_PROTOCOL = "2025-03-26";
-export const SERVER_INFO = { name: "apogee", version: "1.1.0" };
+export const SERVER_INFO = { name: "apogee", version: "2.0.0" };
 
 type RpcId = string | number | null;
 type RpcReq = { jsonrpc?: string; id?: RpcId; method?: string; params?: unknown };
@@ -53,28 +53,32 @@ export async function handleMcpMessage(msg: RpcReq): Promise<unknown | null> {
           name: "Apogee usage",
           mimeType: "text/markdown",
         },
+        {
+          uri: "apogee://mcp",
+          name: "Canonical MCP URL",
+          mimeType: "text/plain",
+        },
       ],
     });
   }
   if (method === "resources/read") {
     const uri = (msg.params as { uri?: string } | undefined)?.uri;
+    const text =
+      uri === "apogee://mcp" ? "https://apogeemcp.digital/api/mcp" : MCP_INSTRUCTIONS;
     return ok(id, {
       contents: [
         {
           uri: uri || "apogee://docs/usage",
-          mimeType: "text/markdown",
-          text: MCP_INSTRUCTIONS,
+          mimeType: uri === "apogee://mcp" ? "text/plain" : "text/markdown",
+          text,
         },
       ],
     });
   }
   if (method === "tools/call") {
     const params = (msg.params || {}) as { name?: string; arguments?: Record<string, unknown> };
-    const name = params.name as ToolName;
-    const impl = toolImpl[name];
-    if (!impl) return err(id, -32601, `Unknown tool: ${params.name}`);
     try {
-      const result = await impl(asArgs(params));
+      const result = await dispatchTool(String(params.name || ""), asArgs(params));
       return ok(id, {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         structuredContent: result,

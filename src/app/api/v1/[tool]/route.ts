@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { corsHeaders } from "@/lib/mcp";
-import { toolImpl, type ToolName } from "@/lib/intel";
+import { dispatchTool } from "@/lib/dispatch";
 
 export const dynamic = "force-dynamic";
 
@@ -20,17 +20,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ tool: stri
 }
 
 async function run(tool: string, args: Record<string, unknown>) {
-  const impl = toolImpl[tool as ToolName];
-  if (!impl) {
-    return NextResponse.json({ ok: false, error: `Unknown tool ${tool}` }, { status: 404, headers: corsHeaders });
-  }
   try {
-    const result = await impl(args);
+    const result = await dispatchTool(tool, args);
     return NextResponse.json({ ok: true, tool, result }, { headers: corsHeaders });
   } catch (error) {
     return NextResponse.json(
       { ok: false, error: error instanceof Error ? error.message : String(error) },
-      { status: 500, headers: corsHeaders },
+      { status: 404, headers: corsHeaders },
     );
   }
 }

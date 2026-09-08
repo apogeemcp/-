@@ -14,8 +14,9 @@ export async function GET() {
       name: "apogee",
       transport: "streamable-http",
       protocol: "2025-03-26",
+      url: "https://apogeemcp.digital/api/mcp",
       auth: "none",
-      tools: true,
+      tools: 3000,
     },
     { headers: corsHeaders },
   );

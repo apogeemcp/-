@@ -6,10 +6,19 @@ export function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-xs text-ivory/55 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/icon.png?v=3" alt="" width={22} height={22} className="rounded-full ring-1 ring-gold/40" />
+          <img src="/brand/icon.png?v=4" alt="" width={22} height={22} className="rounded-full ring-1 ring-gold/40" />
           <p className="tracking-[0.2em] uppercase">Apogee · unaffiliated with Robinhood Markets, Inc. and pons</p>
         </div>
         <div className="flex flex-wrap gap-4">
+          <Link href="/connect" className="hover:text-gold">
+            Connect
+          </Link>
+          <Link href="/orbit" className="hover:text-gold">
+            Orbit
+          </Link>
+          <Link href="/wallet" className="hover:text-gold">
+            Wallet
+          </Link>
           <Link href="/launches" className="hover:text-gold">
             Launches
           </Link>

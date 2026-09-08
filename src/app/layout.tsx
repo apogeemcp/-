@@ -3,6 +3,7 @@ import { Syne, Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { Providers } from "@/components/Providers";
 import { publicSiteUrl } from "@/lib/site";
 
 const syne = Syne({ subsets: ["latin"], variable: "--font-display" });
@@ -12,7 +13,7 @@ const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variabl
 export const metadata: Metadata = {
   title: "Apogee — Robinhood Chain MCP",
   description:
-    "Apogee is Robinhood Chain intel for agents. Search. Chart. Desk. Launch. Live pons indexing. No login — add the MCP to any AI app.",
+    "3000 Robinhood Chain tools for agents. Search, chart, desk, wallet tracking, analytics, pons launch via Phantom. Live MCP at https://apogeemcp.digital/api/mcp — add to Cursor, Claude, ChatGPT, or Grok.",
   metadataBase: new URL(publicSiteUrl()),
   icons: {
     icon: [{ url: "/brand/icon.png?v=3", type: "image/png" }],
@@ -37,9 +38,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${syne.variable} ${instrument.variable} ${mono.variable}`}>
       <body className="font-body antialiased">
-        <Nav />
-        {children}
-        <Footer />
+        <Providers>
+          <Nav />
+          {children}
+          <Footer />
+        </Providers>
       </body>
     </html>
   );
