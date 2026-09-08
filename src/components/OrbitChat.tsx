@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useWallet } from "./WalletProvider";
 import { explorerTx } from "@/lib/chain";
+import { assertLaunchTx } from "@/lib/txguard";
 
 type Msg = { role: "user" | "assistant"; content: string; tools?: string[] };
 
@@ -17,13 +18,15 @@ export function OrbitChat() {
         "Orbit is live on Apogee. Scan a ticker, track a wallet, or say “launch token named Aurora ticker AUR”. I call real MCP tools — I will not invent prices.",
     },
   ]);
-  const [prepared, setPrepared] = useState<{ to: string; data: string; value: string } | null>(null);
+  const [prepared, setPrepared] = useState<{ to: string; data: string; value: string; chainId?: string } | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
   async function send() {
     const prompt = input.trim();
     if (!prompt || busy) return;
     setInput("");
+    setPrepared(null);
+    setTxHash(null);
     const history = msgs.map((m) => ({ role: m.role, content: m.content }));
     setMsgs((m) => [...m, { role: "user", content: prompt }]);
     setBusy(true);
@@ -36,9 +39,31 @@ export function OrbitChat() {
         body: JSON.stringify({ prompt, history }),
         signal: ctl.signal,
       });
-      const json = await res.json();
-      const unsigned = json.prepared?.unsignedTx as { to: string; data: string; value: string } | undefined;
-      if (unsigned?.to) setPrepared(unsigned);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err =
+          res.status === 429
+            ? "Rate limited — wait a minute and retry."
+            : String(json.error || `Request failed (${res.status})`);
+        setMsgs((m) => [...m, { role: "assistant", content: err }]);
+        return;
+      }
+      const unsigned = json.prepared?.unsignedTx as { to: string; data: string; value: string; chainId?: string } | undefined;
+      if (unsigned?.to) {
+        try {
+          setPrepared(assertLaunchTx(unsigned));
+        } catch (e) {
+          setPrepared(null);
+          setMsgs((m) => [
+            ...m,
+            { role: "assistant", content: json.reply || "Done." },
+            { role: "assistant", content: `Launch payload rejected: ${e instanceof Error ? e.message : String(e)}` },
+          ]);
+          return;
+        }
+      } else {
+        setPrepared(null);
+      }
       const tools = Array.isArray(json.calls) ? json.calls.map((c: { tool?: string }) => c.tool).filter(Boolean) : [];
       setMsgs((m) => [
         ...m,
@@ -49,7 +74,16 @@ export function OrbitChat() {
         },
       ]);
     } catch (e) {
-      setMsgs((m) => [...m, { role: "assistant", content: e instanceof Error && e.name === "AbortError" ? "Timed out waiting for Orbit. Try a narrower prompt." : String(e) }]);
+      setMsgs((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content:
+            e instanceof Error && e.name === "AbortError"
+              ? "Timed out waiting for Orbit. Try a narrower prompt."
+              : String(e),
+        },
+      ]);
     } finally {
       clearTimeout(timer);
       setBusy(false);
@@ -58,15 +92,19 @@ export function OrbitChat() {
 
   async function sign() {
     if (!prepared) return;
-    if (!address) await connect();
-    const hash = await signLaunch(prepared);
-    setTxHash(hash);
+    try {
+      if (!address) await connect();
+      const hash = await signLaunch(prepared);
+      setTxHash(hash);
+    } catch (e) {
+      setMsgs((m) => [...m, { role: "assistant", content: e instanceof Error ? e.message : String(e) }]);
+    }
   }
 
   return (
     <div className="panel flex min-h-[32rem] flex-col rounded-xl p-5">
       <p className="font-script text-lg text-ember">Orbit AI</p>
-      <div className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
+      <div aria-live="polite" className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
         {msgs.map((m, i) => (
           <div
             key={i}
@@ -83,10 +121,23 @@ export function OrbitChat() {
       {prepared ? (
         <div className="mt-4 rounded-xl border border-ember/40 bg-black/50 p-4">
           <p className="kicker text-ember">Unsigned pons launch</p>
+          <p className="mt-1 text-xs text-ivory/70">
+            Review destination, fee, and chain in Phantom. Orbit cannot broadcast this without your signature.
+          </p>
           <p className="mt-1 break-all font-mono text-[11px] text-ivory/80">to {prepared.to}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" onClick={sign} className="btn-gold">
               Sign in Phantom
+            </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => {
+                setPrepared(null);
+                setTxHash(null);
+              }}
+            >
+              Dismiss
             </button>
             {txHash ? (
               <a className="btn-ghost text-gold" href={explorerTx(txHash)} target="_blank" rel="noreferrer">
@@ -103,7 +154,11 @@ export function OrbitChat() {
           send();
         }}
       >
+        <label htmlFor="orbit-prompt" className="sr-only">
+          Message Orbit
+        </label>
         <input
+          id="orbit-prompt"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Scan NVDA · track 0x… · launch token named Ember ticker EMB"

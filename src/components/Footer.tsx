@@ -66,17 +66,17 @@ export function Footer() {
             <p className="kicker">Community</p>
             <ul className="mt-3 space-y-2 text-sm text-ivory/80">
               <li>
-                <a href={COMMUNITY.telegram} target="_blank" rel="noreferrer" className="hover:text-ember">
+                <a href={COMMUNITY.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-ember">
                   Telegram
                 </a>
               </li>
               <li>
-                <a href={COMMUNITY.x} target="_blank" rel="noreferrer" className="hover:text-ember">
+                <a href={COMMUNITY.x} target="_blank" rel="noopener noreferrer" className="hover:text-ember">
                   X
                 </a>
               </li>
               <li>
-                <a href={COMMUNITY.github} target="_blank" rel="noreferrer" className="hover:text-ember">
+                <a href={COMMUNITY.github} target="_blank" rel="noopener noreferrer" className="hover:text-ember">
                   GitHub
                 </a>
               </li>

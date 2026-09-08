@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { GLOSSARY } from "@/lib/copy";
 
 export function Hint({ id }: { id: keyof typeof GLOSSARY }) {
@@ -32,9 +33,9 @@ export function GuidePanel({
       <h2 className="mt-2 font-heading text-xl text-ivory">{title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-ivory/80">{body}</p>
       {href ? (
-        <a href={href} className="mt-3 inline-block text-sm text-ember hover:text-ivory">
+        <Link href={href} className="mt-3 inline-block text-sm text-ember hover:text-ivory">
           More guides →
-        </a>
+        </Link>
       ) : null}
     </aside>
   );

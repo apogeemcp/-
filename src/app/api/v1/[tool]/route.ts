@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { corsHeaders } from "@/lib/mcp";
-import { dispatchTool } from "@/lib/dispatch";
+import { dispatchTool, httpStatusForToolError } from "@/lib/dispatch";
 import { checkRateLimit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
@@ -31,9 +31,10 @@ async function run(req: NextRequest, tool: string, args: Record<string, unknown>
     const result = await dispatchTool(tool, args);
     return NextResponse.json({ ok: true, tool, result }, { headers: { ...corsHeaders, ...limited.headers } });
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : String(error) },
-      { status: 404, headers: { ...corsHeaders, ...limited.headers } },
+      { ok: false, error: message },
+      { status: httpStatusForToolError(message), headers: { ...corsHeaders, ...limited.headers } },
     );
   }
 }

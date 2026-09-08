@@ -44,6 +44,8 @@ export function ScanBox() {
         body: JSON.stringify({ query }),
       });
       setOut(await r.json().then((j) => (j.result || j) as Scan));
+    } catch {
+      setOut({ error: "Scan failed. Check the connection and retry." });
     } finally {
       setBusy(false);
     }
@@ -70,7 +72,11 @@ export function ScanBox() {
       <p className="kicker">Scan</p>
       <h3 className="mt-1 font-display text-2xl">OG-style score for RH chain</h3>
       <form onSubmit={run} className="mt-4 flex gap-2">
+        <label htmlFor="scan-query" className="sr-only">
+          Token, ticker, or contract
+        </label>
         <input
+          id="scan-query"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="NVDA, ticker, or 0x…"
@@ -85,7 +91,7 @@ export function ScanBox() {
         <div className="mt-5 grid gap-3 sm:grid-cols-4">
           <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 p-3 sm:col-span-4">
             <TokenMedia src={out.token.image} symbol={out.token.symbol} name={out.token.name} size={40} />
-            <p className="min-w-0 font-mono text-[11px] text-ivory/80">
+            <p className="min-w-0 break-all font-mono text-[11px] text-ivory/80">
               {out.token.symbol} · {out.token.address} · {out.token.canonicalStock ? "canonical stock" : "market token"} ·{" "}
               {out.token.momentumLabel}
               {out.token.address ? (

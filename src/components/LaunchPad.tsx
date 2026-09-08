@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { TokenMedia } from "./TokenMedia";
 
 export type PonsLaunch = {
@@ -38,7 +39,7 @@ export function LaunchGrid({ launches, compact = false }: { launches: PonsLaunch
   return (
     <div className={`grid gap-3 ${compact ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
       {launches.map((l) => (
-        <a
+        <Link
           key={l.token}
           href={`/token/${l.token}`}
           className="group rounded-[16px] border border-white/10 bg-black/35 p-4 transition hover:-translate-y-0.5 hover:border-ember/40"
@@ -65,7 +66,7 @@ export function LaunchGrid({ launches, compact = false }: { launches: PonsLaunch
               : "curve / pool"}
             {l.thresholdEth ? ` · ${l.thresholdEth} ETH thresh` : ""}
           </p>
-        </a>
+        </Link>
       ))}
     </div>
   );
@@ -111,7 +112,7 @@ export function LaunchPad() {
           href="https://www.ponsfamily.com/launchpad"
           className="text-[11px] uppercase tracking-[0.18em] text-ember hover:text-gold"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
         >
           pons app ↗
         </a>

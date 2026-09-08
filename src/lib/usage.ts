@@ -2,7 +2,7 @@ import { supabaseAnonKey, supabaseUrl } from "./site";
 
 export function logUsage(tool: string, query: string | undefined, ok: boolean) {
   const url = supabaseUrl();
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return;
   void fetch(`${url}/rest/v1/apogee_usage`, {
     method: "POST",

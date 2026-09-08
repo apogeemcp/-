@@ -4,6 +4,11 @@ import { PageFrame, PageHero } from "@/components/PageHero";
 import { GUIDES } from "@/lib/copy";
 import { LEGAL } from "@/lib/site";
 
+export const metadata = {
+  title: "Orbit",
+  description: "Apogee assistant that calls live MCP tools for scans, wallets, and unsigned pons launches.",
+};
+
 export default function OrbitPage() {
   return (
     <main>

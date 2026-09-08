@@ -46,7 +46,7 @@ export function mcpHttpUrl(): string {
 }
 
 export function restApiUrl(): string {
-  return `${CANONICAL_ORIGIN}/api/v1`;
+  return `${publicSiteUrl()}/api/v1`;
 }
 
 export function cursorConfig() {
@@ -84,7 +84,7 @@ export function installLinks() {
   const vscode = encodeURIComponent(JSON.stringify({ name: "apogee", type: "http", url }));
   return {
     url,
-    alias: CANONICAL_MCP_ALIAS,
+    alias: `${publicSiteUrl()}/mcp`,
     cursor: `cursor://anysphere.cursor-deeplink/mcp/install?name=apogee&config=${cursorCfg}`,
     vscode: `vscode:mcp/install?${vscode}`,
     claude: `https://claude.ai/settings/connectors`,
@@ -107,7 +107,7 @@ export const HOSTS = [
   { id: "codex", name: "Codex CLI", file: "~/.codex/config.toml", hint: "[mcp_servers.apogee] url = ..." },
 ] as const;
 
-export const ASSET_V = "5";
+export const ASSET_V = "6";
 
 export function asset(path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;

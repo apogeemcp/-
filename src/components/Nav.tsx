@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "./BrandMark";
 import { InstallApp } from "./InstallApp";
+import { SiteSearch } from "./SiteSearch";
 import { TabBar } from "./TabBar";
 import { WalletButton } from "./WalletButton";
 import { MORE_LINKS, TABS, mcpHttpUrl } from "@/lib/site";
@@ -43,6 +44,7 @@ export function Nav() {
               {mcp.replace("https://", "")}
             </Link>
             <InstallApp compact />
+            <SiteSearch />
             <Link
               href="/developers"
               className="hidden rounded-full border border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-ivory/80 hover:text-ivory sm:inline"
@@ -56,6 +58,7 @@ export function Nav() {
                 aria-haspopup="menu"
                 onClick={() => setOpen((v) => !v)}
                 className="rounded-full border border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-ivory/80 hover:text-ivory"
+                aria-label="More navigation links"
               >
                 More
               </button>

@@ -26,9 +26,6 @@ export default function DevelopersHome() {
           <Link href="/developers/tools" className="btn-ghost">
             View tools
           </Link>
-          <Link href="/developers/quickstart" className="btn-ghost">
-            Quick Start
-          </Link>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <a href={GITHUB_REPO} className="btn-ghost" target="_blank" rel="noreferrer">

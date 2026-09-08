@@ -41,6 +41,7 @@ export const TOOLS: ToolDef[] = [
         query: { type: "string", description: "Token, ticker, or pool address" },
         timeframe: { type: "string", enum: ["minute", "hour", "day"], default: "minute" },
         aggregate: { type: "number", description: "Bar aggregation, e.g. 5 for 5m", default: 5 },
+        limit: { type: "number", description: "Candle count, max 1000", default: 180 },
       },
       required: ["query"],
     },

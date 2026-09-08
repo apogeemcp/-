@@ -6,6 +6,11 @@ import { GuidePanel } from "@/components/InfoBits";
 import { GUIDES } from "@/lib/copy";
 import { CANONICAL_MCP, PRODUCT } from "@/lib/site";
 
+export const metadata = {
+  title: "Desk",
+  description: "Scan tickers, trending pools, Stock Token premiums, and pons launches on Robinhood Chain.",
+};
+
 export default function DashboardPage() {
   return (
     <main>

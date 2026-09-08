@@ -75,8 +75,10 @@ export function DeskLive() {
     };
   }, []);
 
-  if (error && !desk) return <p className="text-sm text-flare">Desk feed unavailable: {error}</p>;
+  if (error && !desk) return <p className="text-sm text-flare">Desk feed unavailable: {error}. Retry in a minute or open a token from Scan.</p>;
   if (!desk) return <p className="animate-pulse text-sm text-ivory/70">Lighting the desk…</p>;
+
+  const stale = Boolean(error && desk);
 
   const trend = desk.trending || [];
   const ranked = [...trend].sort((a, b) => Number(b.change1h || 0) - Number(a.change1h || 0));
@@ -87,6 +89,11 @@ export function DeskLive() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
+      {stale ? (
+        <p className="rounded-xl border border-flare/40 bg-black/40 px-4 py-2 text-xs text-flare lg:col-span-3">
+          Showing last successful desk snapshot. Live refresh failed: {error}
+        </p>
+      ) : null}
       <article className="panel rounded-xl p-5">
         <p className="kicker">Market</p>
         <p className="mt-3 font-display text-4xl text-ivory">{desk.chain?.block?.toLocaleString()}</p>
@@ -137,34 +144,42 @@ export function DeskLive() {
       <article className="panel rounded-xl p-5">
         <p className="kicker">Trending</p>
         <ul className="mt-3 space-y-2">
-          {trend.slice(0, 8).map((t) => (
-            <li key={String(t.tokenAddress || t.poolAddress || t.name)} className="flex items-baseline justify-between gap-3 text-sm">
-              <Link className="truncate text-ivory hover:text-gold" href={tokenHref(t)}>
-                {t.symbol || t.name}
-              </Link>
-              <span className="font-mono text-ivory/80">{usd(t.volume24h ?? null)}</span>
-            </li>
-          ))}
+          {trend.slice(0, 8).length ? (
+            trend.slice(0, 8).map((t) => (
+              <li key={String(t.tokenAddress || t.poolAddress || t.name)} className="flex items-baseline justify-between gap-3 text-sm">
+                <Link className="truncate text-ivory hover:text-gold" href={tokenHref(t)}>
+                  {t.symbol || t.name}
+                </Link>
+                <span className="font-mono text-ivory/80">{usd(t.volume24h ?? null)}</span>
+              </li>
+            ))
+          ) : (
+            <li className="text-sm text-ivory/70">No trending pools in this snapshot. Scan a ticker above or retry shortly.</li>
+          )}
         </ul>
       </article>
       <article className="panel rounded-xl p-5 lg:col-span-2">
         <p className="kicker text-flare">Stock desk</p>
         <ul className="mt-3 space-y-2">
-          {(desk.stocks || []).map((s) => (
-            <li key={s.symbol} className="grid grid-cols-[4rem_1fr_auto] items-baseline gap-3 text-sm">
-              {s.address ? (
-                <Link href={`/token/${s.address}`} className="text-ivory hover:text-gold">
-                  {s.symbol}
-                </Link>
-              ) : (
-                <span className="text-ivory">{s.symbol}</span>
-              )}
-              <span className="font-mono text-ivory">{s.dexPrice ? `$${s.dexPrice.toFixed(2)}` : "—"}</span>
-              <span className={Number(s.premiumBps) >= 0 ? "font-mono text-gold" : "font-mono text-flare"}>
-                {s.premiumBps == null ? "" : `${(s.premiumBps / 100).toFixed(2)}%`}
-              </span>
-            </li>
-          ))}
+          {(desk.stocks || []).length ? (
+            (desk.stocks || []).map((s) => (
+              <li key={s.symbol} className="grid grid-cols-[4rem_1fr_auto] items-baseline gap-3 text-sm">
+                {s.address ? (
+                  <Link href={`/token/${s.address}`} className="text-ivory hover:text-gold">
+                    {s.symbol}
+                  </Link>
+                ) : (
+                  <span className="text-ivory">{s.symbol}</span>
+                )}
+                <span className="font-mono text-ivory">{s.dexPrice ? `$${s.dexPrice.toFixed(2)}` : "—"}</span>
+                <span className={Number(s.premiumBps) >= 0 ? "font-mono text-gold" : "font-mono text-flare"}>
+                  {s.premiumBps == null ? "" : `${(s.premiumBps / 100).toFixed(2)}%`}
+                </span>
+              </li>
+            ))
+          ) : (
+            <li className="text-sm text-ivory/70">Stock Token quotes are empty right now. RHJ or Dex may be down.</li>
+          )}
         </ul>
       </article>
       {fresh.length ? (

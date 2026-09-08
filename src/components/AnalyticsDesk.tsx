@@ -71,7 +71,10 @@ export function AnalyticsDesk() {
           {typeof overview?.gas === "number" ? `${overview.gas.toFixed(4)} gwei` : "—"}
         </p>
         <form className="mt-4 flex flex-col gap-2 sm:flex-row" onSubmit={run}>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} className="field flex-1" placeholder="NVDA, ticker, or 0x…" />
+          <label htmlFor="analytics-query" className="sr-only">
+            Token or ticker
+          </label>
+          <input id="analytics-query" value={query} onChange={(e) => setQuery(e.target.value)} className="field flex-1" placeholder="NVDA, ticker, or 0x…" />
           <button className="btn-gold" disabled={busy}>
             {busy ? "Running" : "Run"}
           </button>

@@ -5,6 +5,11 @@ import { GuidePanel } from "@/components/InfoBits";
 import { GUIDES } from "@/lib/copy";
 import { LEGAL } from "@/lib/site";
 
+export const metadata = {
+  title: "Profile",
+  description: "Mark-to-market wallet holdings on Robinhood Chain. Connect Phantom or paste a 0x address.",
+};
+
 export default function WalletPage() {
   return (
     <main>

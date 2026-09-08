@@ -37,6 +37,7 @@ export async function rpc<T = unknown>(method: string, params: unknown[] = [], a
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+        signal: AbortSignal.timeout(12_000),
       });
       if (res.status === 429) throw new Error("Too Many Requests");
       const body = (await res.json()) as { result?: T; error?: { message?: string } };

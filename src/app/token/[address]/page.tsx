@@ -2,7 +2,19 @@ import { TokenView } from "@/components/TokenView";
 import { GuidePanel } from "@/components/InfoBits";
 import { PageFrame, PageHero } from "@/components/PageHero";
 import { GUIDES } from "@/lib/copy";
-import { isAddress } from "@/lib/chain";
+import { isAddress, shortAddress } from "@/lib/chain";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ address: string }> }): Promise<Metadata> {
+  const { address } = await params;
+  const ok = isAddress(address);
+  return {
+    title: ok ? `Token ${shortAddress(address)}` : "Unknown token",
+    description: ok
+      ? `Live Robinhood Chain market, chart, and pons data for ${address}.`
+      : "Provide a 0x contract on Robinhood Chain.",
+  };
+}
 
 export default async function TokenPage({ params }: { params: Promise<{ address: string }> }) {
   const { address } = await params;

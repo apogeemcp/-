@@ -3,6 +3,7 @@ import { dispatchTool } from "./dispatch";
 import { nvidiaChat, nvidiaEnabled, type ChatMsg } from "./nvidia";
 import { TOOLS } from "./tools";
 import { CANONICAL_MCP, LEGAL, PRODUCT } from "./site";
+import { assertLaunchTx } from "./txguard";
 
 type AgentMessage = { role: "user" | "assistant" | "tool"; content: string };
 
@@ -113,7 +114,7 @@ async function nvidiaLoop(prompt: string, history: AgentMessage[]) {
         content: turn.content || "",
         tool_calls: turn.tool_calls,
       });
-      for (const tc of turn.tool_calls) {
+      for (const tc of (turn.tool_calls || []).slice(0, 6)) {
         let args: Record<string, unknown> = {};
         try {
           args = JSON.parse(tc.function.arguments || "{}") as Record<string, unknown>;
@@ -127,7 +128,7 @@ async function nvidiaLoop(prompt: string, history: AgentMessage[]) {
           result = { ok: false, error: error instanceof Error ? error.message : String(error) };
         }
         calls.push({ tool: tc.function.name, args, result });
-        if (tc.function.name === "prepare_pons_launch") prepared = result;
+        if (tc.function.name === "prepare_pons_launch") prepared = guardPrepared(result);
         messages.push({
           role: "tool",
           name: tc.function.name,
@@ -155,6 +156,17 @@ async function nvidiaLoop(prompt: string, history: AgentMessage[]) {
     prepared,
     calls,
   };
+}
+
+function guardPrepared(result: unknown) {
+  const r = result as { unsignedTx?: { to: string; data: string; value: string; chainId?: string } };
+  if (!r?.unsignedTx) return result;
+  try {
+    r.unsignedTx = assertLaunchTx(r.unsignedTx);
+    return r;
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export async function runAgent(prompt: string, history: AgentMessage[] = []) {
@@ -209,7 +221,7 @@ async function heuristicAgent(prompt: string, history: AgentMessage[]) {
     const draft = extractLaunch(text);
     const symbol = draft.symbol || ticker || "TOKEN";
     const name = draft.name || symbol;
-    const prepared = await call("prepare_pons_launch", { name, symbol, description: text });
+    const prepared = guardPrepared(await call("prepare_pons_launch", { name, symbol, description: text }));
     return {
       ok: true,
       intent,

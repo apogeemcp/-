@@ -25,6 +25,7 @@ import { getCurveQuote, getMcpInfo, preparePonsBuy, preparePonsLaunch, previewPo
 import { CATALOG_SIZE } from "./catalog";
 import { mcpHttpUrl } from "./site";
 import { mediaUrl } from "./media";
+import { moneyField } from "./market";
 import {
   geckoNewPools,
   geckoOhlcv,
@@ -90,8 +91,7 @@ function rhPairs(pairs: DsPair[] | null | undefined): DsPair[] {
 }
 
 function num(v: unknown): number | null {
-  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
-  return Number.isFinite(n) ? n : null;
+  return moneyField(v, { allowNegative: true });
 }
 
 function ageDaysFromMs(ms: number | null | undefined): number | null {
@@ -208,11 +208,11 @@ function tokenFromPair(p: DsPair) {
     quote: p.quoteToken,
     pairAddress: p.pairAddress,
     dexId: p.dexId,
-    priceUsd: num(p.priceUsd),
-    liquidityUsd: p.liquidity?.usd ?? null,
-    volume24h: p.volume?.h24 ?? null,
-    fdv: p.fdv ?? null,
-    marketCap: p.marketCap ?? p.fdv ?? null,
+    priceUsd: moneyField(p.priceUsd),
+    liquidityUsd: moneyField(p.liquidity?.usd),
+    volume24h: moneyField(p.volume?.h24),
+    fdv: moneyField(p.fdv),
+    marketCap: moneyField(p.marketCap ?? p.fdv),
     priceChange: p.priceChange || null,
     txns24h: p.txns?.h24 || null,
     createdAt: p.pairCreatedAt || null,
@@ -597,16 +597,17 @@ export async function getSwapQuote(params: {
   };
 }
 
-export async function getChart(query: string, timeframe = "minute", aggregate = 5) {
+export async function getChart(query: string, timeframe = "minute", aggregate = 5, limit = 180) {
+  const cap = Math.min(Math.max(Number(limit) || 180, 24), 1000);
   const pairs = isAddress(query) ? await tokenPairs(query) : await searchDex(query);
   let pool = pairs[0]?.pairAddress || "";
-  let bars = pool ? await ohlcv(pool, timeframe, aggregate, 180) : [];
+  let bars = pool ? await ohlcv(pool, timeframe, aggregate, cap) : [];
   if (!bars.length && isAddress(query)) {
     const gPools = await geckoTokenPools(query).catch(() => []);
     const gPool = gPools[0]?.poolAddress;
     if (gPool) {
       pool = gPool;
-      bars = await ohlcv(pool, timeframe, aggregate, 180);
+      bars = await ohlcv(pool, timeframe, aggregate, cap);
     }
   }
   if (!pool) return { ok: false, error: `No pool for ${query}` };
@@ -627,7 +628,12 @@ export const toolImpl = {
   scan_token: (args: Record<string, unknown>) => scanToken(String(args.query || args.address || args.mint || "")),
   get_token: (args: Record<string, unknown>) => getToken(String(args.address || args.query || "")),
   get_chart: (args: Record<string, unknown>) =>
-    getChart(String(args.query || args.pool || args.address || ""), String(args.timeframe || "minute"), Number(args.aggregate || 5) || 5),
+    getChart(
+      String(args.query || args.pool || args.address || ""),
+      String(args.timeframe || "minute"),
+      Number(args.aggregate || 5) || 5,
+      Number(args.limit || 180) || 180,
+    ),
   get_desk: () => getDesk(),
   list_trending: (args: Record<string, unknown>) => trendingPools(String(args.duration || "1h")),
   list_launches: async (args: Record<string, unknown>) => {

@@ -36,6 +36,8 @@ export function TokenMedia({
       width={size}
       height={size}
       className="shrink-0 rounded-full object-cover ring-1 ring-white/15"
+      loading="lazy"
+      decoding="async"
       onError={() => setIdx((i) => i + 1)}
     />
   );

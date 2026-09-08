@@ -755,7 +755,7 @@ async function enrichV1(row: ReturnType<typeof decodeV1TokenLaunched>, factory: 
 
 export async function listPonsLaunches(opts: { limit?: number; lookback?: number; generation?: string } = {}) {
   const limit = Math.min(Math.max(Number(opts.limit) || 24, 1), 80);
-  const lookback = Math.min(Math.max(Number(opts.lookback) || 8_000, 500), 80_000);
+  const lookback = Math.min(Math.max(Number(opts.lookback) || 8_000, 500), 16_000);
   const generation = String(opts.generation || "all").toLowerCase();
   return cached(`pons-launches:${generation}:${limit}:${lookback}`, 20_000, async () => {
     const latest = await latestBlockNumber();

@@ -4,6 +4,11 @@ import { PageFrame, PageHero } from "@/components/PageHero";
 import { GUIDES } from "@/lib/copy";
 import { LEGAL, PRODUCT } from "@/lib/site";
 
+export const metadata = {
+  title: "Analytics",
+  description: "Volume, flow, holders proxy, and charts for Robinhood Chain tokens.",
+};
+
 export default function AnalyticsPage() {
   return (
     <main>

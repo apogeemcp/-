@@ -79,10 +79,7 @@ export async function handleMcpMessage(msg: RpcReq): Promise<unknown | null> {
     const params = (msg.params || {}) as { name?: string; arguments?: Record<string, unknown> };
     try {
       const result = await dispatchTool(String(params.name || ""), asArgs(params));
-      return ok(id, {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        structuredContent: result,
-      });
+      return toolPayload(id, result);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return ok(id, {
@@ -95,12 +92,40 @@ export async function handleMcpMessage(msg: RpcReq): Promise<unknown | null> {
   return err(id, -32601, `Method not found: ${method}`);
 }
 
+export const MAX_BATCH = 20;
+const MAX_TOOL_JSON = 180_000;
+
+function toolPayload(id: RpcId, result: unknown) {
+  let text: string;
+  try {
+    text = JSON.stringify(result, null, 2);
+  } catch {
+    text = JSON.stringify({ ok: false, error: "Result could not be serialized" });
+  }
+  if (text.length > MAX_TOOL_JSON) {
+    text = `${text.slice(0, MAX_TOOL_JSON)}\n…truncated`;
+  }
+  return ok(id, {
+    content: [{ type: "text", text }],
+    structuredContent: result,
+  });
+}
+
 export async function handleMcpBody(body: unknown): Promise<{ payload: unknown; notification: boolean }> {
   if (Array.isArray(body)) {
+    if (body.length > MAX_BATCH) {
+      return { payload: err(null, -32600, `Batch too large (max ${MAX_BATCH})`), notification: false };
+    }
     const out: unknown[] = [];
     for (const item of body) {
-      const r = await handleMcpMessage(item as RpcReq);
-      if (r) out.push(r);
+      try {
+        const r = await handleMcpMessage(item as RpcReq);
+        if (r) out.push(r);
+      } catch (error) {
+        const id = item && typeof item === "object" && "id" in item ? ((item as RpcReq).id ?? null) : null;
+        const message = error instanceof Error ? error.message : String(error);
+        out.push(err(id as RpcId, -32603, message));
+      }
     }
     return { payload: out, notification: out.length === 0 };
   }

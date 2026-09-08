@@ -1,11 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { CHAIN } from "@/lib/chain";
+import { assertLaunchTx } from "@/lib/txguard";
 
 type EthereumProvider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
   on?: (ev: string, cb: (...a: unknown[]) => void) => void;
+  removeListener?: (ev: string, cb: (...a: unknown[]) => void) => void;
 };
 
 function getProvider(): EthereumProvider | null {
@@ -28,7 +30,7 @@ type WalletState = {
   error: string | null;
   connect: () => Promise<void>;
   addChain: () => Promise<void>;
-  signLaunch: (tx: { to: string; data: string; value: string }) => Promise<string>;
+  signLaunch: (tx: { to: string; data: string; value: string; chainId?: string }) => Promise<string>;
 };
 
 const Ctx = createContext<WalletState | null>(null);
@@ -38,6 +40,22 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [chainId, setChainId] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const provider = getProvider();
+    if (!provider?.on) return;
+    const onAccounts = (...a: unknown[]) => {
+      const accs = a[0] as string[] | undefined;
+      setAddress(accs?.[0] || null);
+    };
+    const onChain = (...a: unknown[]) => setChainId(String(a[0] || ""));
+    provider.on("accountsChanged", onAccounts);
+    provider.on("chainChanged", onChain);
+    return () => {
+      provider.removeListener?.("accountsChanged", onAccounts);
+      provider.removeListener?.("chainChanged", onChain);
+    };
+  }, []);
 
   const addChain = useCallback(async () => {
     const provider = getProvider();
@@ -58,8 +76,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         ],
       });
     }
-    const id = (await provider.request({ method: "eth_chainId" })) as string;
+    const id = String((await provider.request({ method: "eth_chainId" })) || "").toLowerCase();
     setChainId(id);
+    if (id !== CHAIN.hexId.toLowerCase()) {
+      throw new Error(`Wallet is not on Robinhood Chain (${CHAIN.id}). Switch network in Phantom, then retry.`);
+    }
   }, []);
 
   const connect = useCallback(async () => {
@@ -81,13 +102,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, [addChain]);
 
   const signLaunch = useCallback(
-    async (tx: { to: string; data: string; value: string }) => {
+    async (tx: { to: string; data: string; value: string; chainId?: string }) => {
       const provider = getProvider();
       if (!provider || !address) throw new Error("Connect Phantom first.");
+      const safe = assertLaunchTx(tx);
       await addChain();
+      const id = String((await provider.request({ method: "eth_chainId" })) || "").toLowerCase();
+      if (id !== CHAIN.hexId.toLowerCase()) throw new Error("Wrong chain. Switch to Robinhood Chain before signing.");
       const hash = (await provider.request({
         method: "eth_sendTransaction",
-        params: [{ from: address, to: tx.to, data: tx.data, value: tx.value }],
+        params: [{ from: address, to: safe.to, data: safe.data, value: safe.value }],
       })) as string;
       return hash;
     },

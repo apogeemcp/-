@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BannerArt, PageFrame } from "@/components/PageHero";
 import { InstallApp } from "@/components/InstallApp";
+import { FirstVisit } from "@/components/FirstVisit";
 import { CANONICAL_MCP, LEGAL, PRODUCT } from "@/lib/site";
 import { CHAIN } from "@/lib/chain";
 import { ABOUT } from "@/lib/copy";
@@ -51,6 +52,7 @@ export default function HomePage() {
       </section>
 
       <PageFrame>
+        <FirstVisit />
         <div className="grid gap-3 sm:grid-cols-5">
           {PRODUCT.pillars.map((p, i) => (
             <Link key={p.name} href={p.href} className="panel px-4 py-5">

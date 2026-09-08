@@ -19,6 +19,8 @@ export function BannerArt({ focus = "page" }: { focus?: keyof typeof FOCI }) {
         src={asset("/brand/banner.webp")}
         alt=""
         className={`absolute inset-0 h-full w-full object-cover ${f.pos}`}
+        fetchPriority="high"
+        decoding="async"
       />
       <div className={`absolute inset-0 bg-gradient-to-r ${f.wash}`} />
       <div className="absolute inset-0 bg-gradient-to-t from-[#07070a] via-[#07070a]/30 to-transparent" />

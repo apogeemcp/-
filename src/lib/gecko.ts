@@ -1,5 +1,6 @@
 import { CHAIN, ENDPOINTS, isAddress } from "./chain";
 import { fetchJson } from "./rpc";
+import { finiteNumber, moneyField } from "./market";
 
 const GECKO_HDR = { accept: "application/json;version=20230302" };
 
@@ -20,9 +21,12 @@ export type GeckoTrade = {
   explorer: string | null;
 };
 
-function num(v: unknown): number | null {
-  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
-  return Number.isFinite(n) ? n : null;
+function usd(v: unknown): number | null {
+  return moneyField(v);
+}
+
+function pct(v: unknown): number | null {
+  return finiteNumber(v);
 }
 
 export function geckoRelAddress(rel: unknown): string | null {
@@ -51,16 +55,16 @@ export function geckoPools(data: GeckoPoolRow[] | undefined) {
       quoteAddress,
       name,
       symbol,
-      priceUsd: num(a.base_token_price_usd),
-      fdvUsd: num(a.fdv_usd),
-      marketCapUsd: num(a.market_cap_usd),
+      priceUsd: usd(a.base_token_price_usd),
+      fdvUsd: usd(a.fdv_usd),
+      marketCapUsd: usd(a.market_cap_usd),
       createdAt: a.pool_created_at,
-      reserveUsd: num(a.reserve_in_usd),
-      volume24h: num((a.volume_usd as Record<string, unknown> | undefined)?.h24),
-      change5m: num(pc.m5),
-      change1h: num(pc.h1),
-      change6h: num(pc.h6),
-      change24h: num(pc.h24),
+      reserveUsd: usd(a.reserve_in_usd),
+      volume24h: usd((a.volume_usd as Record<string, unknown> | undefined)?.h24),
+      change5m: pct(pc.m5),
+      change1h: pct(pc.h1),
+      change6h: pct(pc.h6),
+      change24h: pct(pc.h24),
       txns24h: (a.transactions as Record<string, unknown> | undefined)?.h24 ?? null,
     };
   });
@@ -126,7 +130,7 @@ export async function geckoToken(address: string) {
     address: String(a.address || address),
     name: a.name ? String(a.name) : null,
     symbol: a.symbol ? String(a.symbol) : null,
-    decimals: num(a.decimals),
+    decimals: finiteNumber(a.decimals),
     image,
     banner: a.banner_image_url ? String(a.banner_image_url) : null,
     description: a.description ? String(a.description) : null,
@@ -135,14 +139,14 @@ export async function geckoToken(address: string) {
     twitter,
     telegram: a.telegram_handle ? `https://t.me/${String(a.telegram_handle).replace(/^@/, "")}` : null,
     discord: a.discord_url ? String(a.discord_url) : null,
-    priceUsd: num(a.price_usd),
-    fdvUsd: num(a.fdv_usd),
-    marketCapUsd: num(a.market_cap_usd),
-    liquidityUsd: num(a.total_reserve_in_usd),
-    volume24h: num((a.volume_usd as Record<string, unknown> | undefined)?.h24),
+    priceUsd: usd(a.price_usd),
+    fdvUsd: usd(a.fdv_usd),
+    marketCapUsd: usd(a.market_cap_usd),
+    liquidityUsd: usd(a.total_reserve_in_usd),
+    volume24h: usd((a.volume_usd as Record<string, unknown> | undefined)?.h24),
     totalSupply: a.normalized_total_supply ? String(a.normalized_total_supply) : a.total_supply ? String(a.total_supply) : null,
     coingeckoId: a.coingecko_coin_id ? String(a.coingecko_coin_id) : null,
-    gtScore: num(a.gt_score),
+    gtScore: finiteNumber(a.gt_score),
     gtVerified: Boolean(a.gt_verified),
   };
 }
@@ -168,15 +172,15 @@ export async function geckoPoolTrades(pool: string, limit = 80): Promise<GeckoTr
     const kind = String(a.kind || "").toLowerCase() === "sell" ? "sell" : "buy";
     const hash = a.tx_hash ? String(a.tx_hash) : null;
     const ts = a.block_timestamp ? Date.parse(String(a.block_timestamp)) : NaN;
-    const usd = num(a.volume_in_usd);
-    const price = num(a.price_to_in_usd) ?? num(a.price_from_in_usd);
-    const amount = kind === "buy" ? num(a.to_token_amount) : num(a.from_token_amount);
+    const volumeUsd = usd(a.volume_in_usd);
+    const price = usd(a.price_to_in_usd) ?? usd(a.price_from_in_usd);
+    const amount = kind === "buy" ? finiteNumber(a.to_token_amount) : finiteNumber(a.from_token_amount);
     return {
       side: kind as "buy" | "sell",
       hash,
       wallet: a.tx_from_address ? String(a.tx_from_address) : null,
       amount,
-      usd,
+      usd: volumeUsd,
       priceUsd: price,
       timestamp: Number.isFinite(ts) ? Math.floor(ts / 1000) : null,
       explorer: hash ? `${CHAIN.explorer}/tx/${hash}` : null,

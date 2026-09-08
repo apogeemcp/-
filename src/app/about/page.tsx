@@ -3,6 +3,11 @@ import { ABOUT } from "@/lib/copy";
 import { CANONICAL_MCP, LEGAL, PRODUCT } from "@/lib/site";
 import Link from "next/link";
 
+export const metadata = {
+  title: "About",
+  description: "What Apogee is: Robinhood Chain intel, MCP tools, and Orbit — not a custodian.",
+};
+
 export default function AboutPage() {
   return (
     <main>

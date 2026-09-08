@@ -1,12 +1,12 @@
-const CACHE = "apogee-static-v5";
+const CACHE = "apogee-static-v6";
 const PRECACHE = ["/manifest.webmanifest", "/brand/banner.webp", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting()),
+    caches.open(CACHE).then(async (cache) => {
+      await Promise.allSettled(PRECACHE.map((u) => cache.add(u)));
+      await self.skipWaiting();
+    }),
   );
 });
 
@@ -25,6 +25,10 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+  if (req.mode === "navigate") {
+    event.respondWith(fetch(req).catch(() => caches.match("/") || new Response("Apogee is offline.", { status: 503, headers: { "content-type": "text/plain" } })));
+    return;
+  }
   event.respondWith(
     fetch(req)
       .then((res) => {

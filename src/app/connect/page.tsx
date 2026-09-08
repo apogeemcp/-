@@ -4,6 +4,11 @@ import { PageFrame, PageHero } from "@/components/PageHero";
 import { GUIDES } from "@/lib/copy";
 import { CANONICAL_MCP, LEGAL, PRODUCT } from "@/lib/site";
 
+export const metadata = {
+  title: "Connect MCP",
+  description: `Add ${CANONICAL_MCP} to Cursor, Claude, ChatGPT, or Grok. Auth none.`,
+};
+
 export default function ConnectPage() {
   return (
     <main>

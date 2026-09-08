@@ -47,10 +47,11 @@ export function TokenView({ address }: { address: string }) {
   const [pons, setPons] = useState<AnyRec | null>(null);
   const [chart, setChart] = useState<AnyRec | null>(null);
   const [siblings, setSiblings] = useState<AnyRec[]>([]);
-  const [tf, setTf] = useState<{ timeframe: string; aggregate: number; label: string }>({
-    timeframe: "minute",
-    aggregate: 5,
-    label: "5m",
+  const [tf, setTf] = useState<{ timeframe: string; aggregate: number; label: string; limit: number }>({
+    timeframe: "day",
+    aggregate: 1,
+    label: "1D",
+    limit: 180,
   });
   const [pnl, setPnl] = useState<AnyRec | null>(null);
 
@@ -97,7 +98,12 @@ export function TokenView({ address }: { address: string }) {
 
   useEffect(() => {
     let live = true;
-    tool("get_chart", { query: address, timeframe: tf.timeframe, aggregate: String(tf.aggregate) })
+    tool("get_chart", {
+      query: address,
+      timeframe: tf.timeframe,
+      aggregate: String(tf.aggregate),
+      limit: String(tf.limit),
+    })
       .then((c) => live && setChart(c))
       .catch(() => null);
     return () => {
@@ -163,20 +169,20 @@ export function TokenView({ address }: { address: string }) {
   if (error) return <p className="text-sm text-flare">{error}</p>;
 
   const frames = [
-    { label: "1m", timeframe: "minute", aggregate: 1 },
-    { label: "5m", timeframe: "minute", aggregate: 5 },
-    { label: "15m", timeframe: "minute", aggregate: 15 },
-    { label: "1h", timeframe: "hour", aggregate: 1 },
-    { label: "4h", timeframe: "hour", aggregate: 4 },
-    { label: "1D", timeframe: "day", aggregate: 1 },
-    { label: "ALL", timeframe: "day", aggregate: 1 },
+    { label: "1m", timeframe: "minute", aggregate: 1, limit: 180 },
+    { label: "5m", timeframe: "minute", aggregate: 5, limit: 180 },
+    { label: "15m", timeframe: "minute", aggregate: 15, limit: 180 },
+    { label: "1h", timeframe: "hour", aggregate: 1, limit: 180 },
+    { label: "4h", timeframe: "hour", aggregate: 4, limit: 180 },
+    { label: "1D", timeframe: "day", aggregate: 1, limit: 180 },
+    { label: "ALL", timeframe: "day", aggregate: 1, limit: 1000 },
   ];
 
   return (
     <div className="space-y-6">
       {banner ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={banner} alt="" className="h-28 w-full rounded-xl object-cover ring-1 ring-white/10 sm:h-40" />
+        <img src={banner} alt="" className="h-28 w-full rounded-xl object-cover ring-1 ring-white/10 sm:h-40" loading="lazy" />
       ) : null}
       <section className="panel rounded-xl p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

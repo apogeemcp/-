@@ -61,7 +61,11 @@ export function WalletDesk() {
             if (query) load(query);
           }}
         >
+          <label htmlFor="wallet-query" className="sr-only">
+            Wallet address
+          </label>
           <input
+            id="wallet-query"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="0x wallet"

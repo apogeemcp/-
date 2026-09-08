@@ -4,6 +4,11 @@ import { PageFrame, PageHero } from "@/components/PageHero";
 import { GUIDES } from "@/lib/copy";
 import { LEGAL } from "@/lib/site";
 
+export const metadata = {
+  title: "Launch",
+  description: "On-chain pons v1/v2 launches on Robinhood Chain. Graduation is not a quality signal.",
+};
+
 export default function LaunchesPage() {
   return (
     <main>

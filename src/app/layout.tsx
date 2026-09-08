@@ -4,6 +4,7 @@ import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Providers } from "@/components/Providers";
+import { SkipToContent } from "@/components/SkipToContent";
 import { SpaceLayer } from "@/components/SpaceLayer";
 import { ASSET_V, PRODUCT, publicSiteUrl } from "@/lib/site";
 
@@ -17,7 +18,10 @@ const title = `${PRODUCT.name} — ${PRODUCT.tag}`;
 const description = `${PRODUCT.toolCount} Robinhood Chain tools for agents. Search, chart, desk, wallet tracking, analytics, pons launch via Phantom. Live MCP at https://apogeemcp.digital/api/mcp — add to Cursor, Claude, ChatGPT, or Grok.`;
 
 export const metadata: Metadata = {
-  title,
+  title: {
+    default: title,
+    template: `%s — ${PRODUCT.name}`,
+  },
   description,
   metadataBase: new URL(publicSiteUrl()),
   icons: {
@@ -60,9 +64,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${display.variable} ${heading.variable} ${body.variable} ${mono.variable} ${script.variable}`}>
       <body className="font-body antialiased">
         <Providers>
+          <SkipToContent />
           <SpaceLayer />
           <Nav />
-          {children}
+          <div id="main-content">{children}</div>
           <Footer />
         </Providers>
       </body>
