@@ -4,12 +4,15 @@ import { buildMemoText, parseMemoText, sanitizeNote } from "./onchain-memo";
 import { effectiveFlags } from "./onchain-store";
 import {
   assembleFromChain,
+  mergeAssembled,
   preferAssembledScan,
   spendLast24h,
+  type AssembledChain,
   type ChainActivity,
   type ChainStats,
   type PublicNote,
 } from "./onchain-chain-index";
+import { sqlConfigured } from "./pg-pool";
 
 function servicePublicAddress() {
   return SERVICE_WALLET_PUBLIC;
@@ -30,23 +33,88 @@ export type WriteNoteInput = {
   wallet?: string | null;
 };
 
-type Assembled = ReturnType<typeof assembleFromChain>;
+type Assembled = AssembledChain;
 
 let scanCache: { at: number; data: Assembled } | null = null;
+let chainRefresh: Promise<void> | null = null;
+const WALLET_SNAPSHOT_TTL_MS = 20_000;
 
 export function invalidateChainScan() {
   scanCache = null;
 }
 
-async function loadAssembled(limit = 48): Promise<Assembled> {
-  if (scanCache && Date.now() - scanCache.at < 12_000) return scanCache.data;
-  const { fetchServiceRawTxs } = await loadChain();
+async function loadSql() {
+  return import("./onchain-sql");
+}
+
+function persistQuiet(data: Assembled) {
+  void loadSql()
+    .then((sql) => sql.persistAssembled(data))
+    .catch(() => undefined);
+}
+
+async function persistNoteSafe(note: PublicNote) {
   try {
-    const { txs, requested, fetched } = await fetchServiceRawTxs(limit);
-    const next = preferAssembledScan(scanCache?.data ?? null, assembleFromChain(txs), { requested, fetched });
-    scanCache = { at: Date.now(), data: next };
-    return next;
+    const sql = await loadSql();
+    await sql.persistNoteBundle(note);
+    const extra = {
+      notes: [note],
+      activity: [],
+      stats: scanCache?.data.stats ?? {
+        totalBurnedUsd: 0,
+        orbitxBurned: 0,
+        totalMemos: 0,
+        totalBuys: 0,
+        solSpent: 0,
+        solSpentNative: 0,
+      },
+    };
+    scanCache = { at: Date.now(), data: mergeAssembled(scanCache?.data ?? extra, extra) };
+  } catch {
+    /* chain remains source of truth */
+  }
+}
+
+async function scanChain(limit: number): Promise<Assembled> {
+  const { fetchServiceRawTxs } = await loadChain();
+  const { txs, requested, fetched } = await fetchServiceRawTxs(limit);
+  return preferAssembledScan(scanCache?.data ?? null, assembleFromChain(txs), { requested, fetched });
+}
+
+function scheduleChainRefresh(limit: number, baseline: Assembled) {
+  if (chainRefresh) return;
+  chainRefresh = (async () => {
+    try {
+      const next = await scanChain(limit);
+      const combined = mergeAssembled(baseline, next);
+      scanCache = { at: Date.now(), data: combined };
+      persistQuiet(combined);
+    } catch {
+      /* SQL/cache already has the feed */
+    }
+  })().finally(() => {
+    chainRefresh = null;
+  });
+}
+
+async function loadAssembled(limit = 48): Promise<Assembled> {
+  const sql = await loadSql();
+  const fromSql = await sql.loadAssembledFromSql(limit).catch(() => null);
+  if (fromSql && fromSql.notes.length > 0) {
+    const merged = mergeAssembled(fromSql, scanCache?.data ?? null);
+    scanCache = { at: Date.now(), data: merged };
+    scheduleChainRefresh(limit, merged);
+    return merged;
+  }
+  if (scanCache && Date.now() - scanCache.at < 12_000) return scanCache.data;
+  try {
+    const next = await scanChain(limit);
+    const combined = mergeAssembled(fromSql, next);
+    scanCache = { at: Date.now(), data: combined };
+    persistQuiet(combined);
+    return combined;
   } catch (error) {
+    if (fromSql) return fromSql;
     if (scanCache?.data) return scanCache.data;
     throw error;
   }
@@ -120,10 +188,15 @@ export async function writeOnchainNote(input: WriteNoteInput) {
     const memo = await sendMemo(buildMemoText(cleaned.note));
     invalidateChainScan();
     let note = fromMemoTx(memo, cleaned.note);
+    await persistNoteSafe(note);
+    if (scanCache?.data) {
+      scanCache = { at: Date.now(), data: mergeAssembled(scanCache.data, { notes: [note], activity: [], stats: scanCache.data.stats }) };
+    }
     if (flags.autoBurnEnabled) {
       const resumed = await resumeNote(note.id, note);
       if (resumed) note = resumed;
     }
+    await persistNoteSafe(note);
     return { ok: true as const, status: 201, idempotent: false, note };
   } catch {
     return { ok: false as const, status: 502, error: "Memo was not confirmed on Solana." };
@@ -139,16 +212,24 @@ export async function resumeNote(id: string, seed?: PublicNote | null): Promise<
   } catch {
     /* buy/burn can still run from the seed memo */
   }
-  let note = seed || assembled.notes.find((n) => n.id === id || n.memoTx === id) || null;
+  const sql = await loadSql();
+  const fromSql = seed?.memoTx
+    ? seed
+    : await sql.loadNoteByMemoTx(id).catch(() => null);
+  let note = seed || fromSql || assembled.notes.find((n) => n.id === id || n.memoTx === id) || null;
   if (!note || note.memoStatus !== "confirmed") return note;
   if (!flags.autoBurnEnabled) return note;
 
   const spend = spendLast24h(assembled.activity, assembled.notes);
   if (spend.burnUsd >= flags.maxDailyBurnUsd) {
-    return { ...note, error: "Daily $ORBITX buy/burn USD limit reached." };
+    const limited = { ...note, error: "Daily $ORBITX buy/burn USD limit reached." };
+    await persistNoteSafe(limited);
+    return limited;
   }
   if (spend.sol >= flags.maxDailySolSpend) {
-    return { ...note, error: "Daily SOL spend limit reached." };
+    const limited = { ...note, error: "Daily SOL spend limit reached." };
+    await persistNoteSafe(limited);
+    return limited;
   }
 
   if (note.buyStatus !== "confirmed") {
@@ -168,14 +249,20 @@ export async function resumeNote(id: string, seed?: PublicNote | null): Promise<
         error: null,
       };
       invalidateChainScan();
+      await persistNoteSafe(note);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      return { ...note, buyStatus: "failed", error: message.slice(0, 400) };
+      const failed = { ...note, buyStatus: "failed" as const, error: message.slice(0, 400) };
+      await persistNoteSafe(failed);
+      return failed;
     }
   }
 
   if (note.buyStatus !== "confirmed") return note;
-  if (note.burnStatus === "confirmed" && note.burnTx) return note;
+  if (note.burnStatus === "confirmed" && note.burnTx) {
+    await persistNoteSafe(note);
+    return note;
+  }
 
   try {
     const { burnOrbitx } = await loadChain();
@@ -190,27 +277,42 @@ export async function resumeNote(id: string, seed?: PublicNote | null): Promise<
       error: null,
     };
     invalidateChainScan();
+    await persistNoteSafe(note);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    return { ...note, burnStatus: "failed", error: message.slice(0, 400) };
+    const failed = { ...note, burnStatus: "failed" as const, error: message.slice(0, 400) };
+    await persistNoteSafe(failed);
+    return failed;
   }
+  await persistNoteSafe(note);
   return note;
 }
 
 export async function recoverPending(limit = 6) {
   const assembled = await loadAssembled();
+  const sql = await loadSql();
+  await sql.persistAssembled(assembled).catch(() => undefined);
   const pending = assembled.notes.filter((n) => n.memoStatus === "confirmed" && n.burnStatus !== "confirmed").slice(0, limit);
   const out = [];
   for (const row of pending) {
     out.push(await resumeNote(row.id));
   }
+  const refreshed = await loadAssembled().catch(() => assembled);
+  await sql.persistAssembled(refreshed).catch(() => undefined);
   return out;
 }
 
 export async function getNoteBySignature(signature: string) {
+  const sql = await loadSql();
+  const fromSql = await sql.loadNoteByMemoTx(signature).catch(() => null);
   const assembled = await loadAssembled().catch(() => null);
   let note =
-    assembled?.notes.find((n) => n.memoTx === signature || n.buyTx === signature || n.burnTx === signature) || null;
+    fromSql ||
+    assembled?.notes.find((n) => n.memoTx === signature || n.buyTx === signature || n.burnTx === signature) ||
+    null;
+  if (note) {
+    return { note, local: note, chain: { ok: true as const, memo: note.memo, signature } };
+  }
   const { readMemoFromSignature } = await loadChain();
   const chain = await readMemoFromSignature(signature);
   if (!note && chain.ok && chain.memo) {
@@ -227,6 +329,7 @@ export async function getNoteBySignature(signature: string) {
       );
     }
   }
+  if (note) await persistNoteSafe(note);
   return { note, local: note, chain };
 }
 
@@ -243,6 +346,14 @@ export async function publicFeed(input: { type?: string; limit?: number; offset?
     ORBITX_BURN: "ORBITX_BURN",
   };
   const eventType = typeMap[String(input.type || "ALL").toUpperCase()] || "ALL";
+  const emptyStats: ChainStats = {
+    totalBurnedUsd: 0,
+    orbitxBurned: 0,
+    totalMemos: 0,
+    totalBuys: 0,
+    solSpent: 0,
+    solSpentNative: 0,
+  };
   try {
     const assembled = await loadAssembled(Math.min(80, offset + limit + 8));
     const items =
@@ -251,7 +362,8 @@ export async function publicFeed(input: { type?: string; limit?: number; offset?
         : assembled.activity.filter((a: ChainActivity) => a.event_type === eventType);
     return {
       ok: true,
-      source: "solana",
+      source: sqlConfigured() ? "sql" : "solana",
+      indexed: sqlConfigured(),
       items: items.slice(offset, offset + limit),
       stats: assembled.stats,
       limit,
@@ -259,18 +371,30 @@ export async function publicFeed(input: { type?: string; limit?: number; offset?
       nextOffset: offset + limit,
     };
   } catch {
+    const sql = await loadSql();
+    const fromSql = await sql.loadAssembledFromSql(Math.min(80, offset + limit + 8)).catch(() => null);
+    if (fromSql) {
+      const items =
+        eventType === "ALL"
+          ? fromSql.activity
+          : fromSql.activity.filter((a: ChainActivity) => a.event_type === eventType);
+      return {
+        ok: true,
+        source: "sql",
+        indexed: true,
+        items: items.slice(offset, offset + limit),
+        stats: fromSql.stats,
+        limit,
+        offset,
+        nextOffset: offset + limit,
+      };
+    }
     return {
       ok: true,
-      source: "solana",
+      source: sqlConfigured() ? "sql" : "solana",
+      indexed: sqlConfigured(),
       items: [] as ChainActivity[],
-      stats: {
-        totalBurnedUsd: 0,
-        orbitxBurned: 0,
-        totalMemos: 0,
-        totalBuys: 0,
-        solSpent: 0,
-        solSpentNative: 0,
-      } satisfies ChainStats,
+      stats: emptyStats,
       limit,
       offset,
       nextOffset: offset + limit,
@@ -289,14 +413,24 @@ export async function notesIndex(input: { wallet?: string; search?: string; limi
       const q = input.search.toLowerCase();
       items = items.filter((n) => n.note.toLowerCase().includes(q));
     }
-    return { ok: true, source: "solana", items: items.slice(offset, offset + limit), limit, offset };
+    return { ok: true, source: sqlConfigured() ? "sql" : "solana", indexed: sqlConfigured(), items: items.slice(offset, offset + limit), limit, offset };
   } catch {
-    return { ok: true, source: "solana", items: [] as PublicNote[], limit, offset };
+    const sql = await loadSql();
+    const fromSql = await sql.loadAssembledFromSql(Math.min(80, offset + limit + 8)).catch(() => null);
+    let items = fromSql?.notes ?? [];
+    if (input.wallet) items = items.filter((n) => n.wallet === input.wallet);
+    if (input.search) {
+      const q = input.search.toLowerCase();
+      items = items.filter((n) => n.note.toLowerCase().includes(q));
+    }
+    return { ok: true, source: fromSql ? "sql" : "solana", indexed: sqlConfigured(), items: items.slice(offset, offset + limit), limit, offset };
   }
 }
 
 export async function walletStatus() {
   const flags = await effectiveFlags();
+  const sql = await loadSql();
+  const snap = await sql.loadWalletSnapshot().catch(() => null);
   let stats: ChainStats = {
     totalBurnedUsd: 0,
     orbitxBurned: 0,
@@ -311,16 +445,17 @@ export async function walletStatus() {
     stats = assembled.stats;
     spend = spendLast24h(assembled.activity, assembled.notes);
   } catch {
-    /* chain unread — still return wallet */
+    /* still return wallet from snapshot or RPC */
   }
+  const indexed = sqlConfigured();
   const fallback = {
     ok: true as const,
-    wallet: servicePublicAddress(),
-    sol: 0,
-    orbitx: 0,
+    wallet: snap?.wallet || servicePublicAddress(),
+    sol: snap?.sol ?? 0,
+    orbitx: snap?.orbitx ?? 0,
     mint: ORBITX_MINT,
     network: "solana-mainnet",
-    ready: false,
+    ready: snap?.ready ?? false,
     notesEnabled: flags.notesEnabled,
     autoBurnEnabled: flags.autoBurnEnabled,
     noteBurnUsd: NOTE_BURN_USD,
@@ -328,32 +463,55 @@ export async function walletStatus() {
     maxDailySolSpend: flags.maxDailySolSpend,
     spentTodayUsd: spend.burnUsd,
     spentTodaySol: spend.sol,
-    source: "solana",
-    marketPriceUsd: null as number | null,
-    estimatedSolForNote: null as number | null,
+    source: indexed ? "sql" : "solana",
+    indexed,
+    sqlReady: indexed,
+    marketPriceUsd: snap?.priceUsd ?? null,
+    estimatedSolForNote: snap?.estimatedSolForNote ?? null,
     stats,
-    scanWallet: `https://solscan.io/account/${servicePublicAddress()}`,
+    scanWallet: `https://solscan.io/account/${snap?.wallet || servicePublicAddress()}`,
   };
-  try {
+
+  const snapFresh = Boolean(snap && Date.now() - snap.updatedAtMs < WALLET_SNAPSHOT_TTL_MS);
+  const refreshLive = async () => {
     const { serviceWalletReady } = await loadSigner();
     const chain = await loadChain();
     const ready = serviceWalletReady();
     const [balances, price, sized] = await Promise.all([
       ready
-        ? chain.serviceBalances().catch(() => ({ sol: 0, orbitx: 0, wallet: servicePublicAddress() }))
-        : Promise.resolve({ sol: 0, orbitx: 0, wallet: servicePublicAddress() }),
-      chain.orbitxMarketPrice().catch(() => null),
-      chain.sizeNoteBurn().catch(() => null),
+        ? chain.serviceBalances().catch(() => ({ sol: snap?.sol ?? 0, orbitx: snap?.orbitx ?? 0, wallet: servicePublicAddress() }))
+        : Promise.resolve({ sol: snap?.sol ?? 0, orbitx: snap?.orbitx ?? 0, wallet: servicePublicAddress() }),
+      chain.orbitxMarketPrice().catch(() => (snap?.priceUsd != null ? { priceUsd: snap.priceUsd } : null)),
+      chain.sizeNoteBurn().catch(() => (snap?.estimatedSolForNote != null ? { solAmount: snap.estimatedSolForNote } : null)),
     ]);
-    return {
-      ...fallback,
+    const live = {
       wallet: balances.wallet,
       sol: balances.sol,
       orbitx: balances.orbitx,
       ready,
-      marketPriceUsd: price?.priceUsd ?? null,
-      estimatedSolForNote: sized?.solAmount ?? null,
-      scanWallet: `https://solscan.io/account/${balances.wallet}`,
+      priceUsd: price?.priceUsd ?? snap?.priceUsd ?? null,
+      estimatedSolForNote: sized?.solAmount ?? snap?.estimatedSolForNote ?? null,
+    };
+    await sql.saveWalletSnapshot(live).catch(() => undefined);
+    return live;
+  };
+
+  if (snapFresh) {
+    void refreshLive().catch(() => undefined);
+    return fallback;
+  }
+
+  try {
+    const live = await refreshLive();
+    return {
+      ...fallback,
+      wallet: live.wallet,
+      sol: live.sol,
+      orbitx: live.orbitx,
+      ready: live.ready,
+      marketPriceUsd: live.priceUsd,
+      estimatedSolForNote: live.estimatedSolForNote,
+      scanWallet: `https://solscan.io/account/${live.wallet}`,
     };
   } catch {
     return fallback;

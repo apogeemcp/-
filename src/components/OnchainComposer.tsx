@@ -20,6 +20,7 @@ type Note = {
   burnUrl: string | null;
   tokenAmount: number | null;
   usdValue: number | null;
+  priceUsd?: number | null;
   createdAt: string;
   error: string | null;
 };
@@ -32,6 +33,8 @@ type WalletInfo = {
   autoBurnEnabled: boolean;
   noteBurnUsd: number;
   estimatedSolForNote: number | null;
+  marketPriceUsd?: number | null;
+  sqlReady?: boolean;
   stats?: { totalMemos?: number };
 };
 
@@ -135,7 +138,7 @@ export function OnchainComposer() {
         </div>
         <div className="mt-3 grid gap-2 text-[12px] text-ivory/70 sm:grid-cols-3">
           <p>Service wallet · {info?.wallet ? `${info.wallet.slice(0, 4)}…${info.wallet.slice(-4)}` : "—"}</p>
-          <p>Network · Solana mainnet</p>
+          <p>$ORBITX · {info?.marketPriceUsd != null ? `$${Number(info.marketPriceUsd).toPrecision(4)}` : "pending market"}</p>
           <p>Notes recorded · {info?.stats?.totalMemos ?? 0}</p>
         </div>
         <p className="mt-3 text-[12px] text-ivory/55">
@@ -154,7 +157,7 @@ export function OnchainComposer() {
 
       <section>
         <h3 className="font-heading text-xl text-ivory">Note history</h3>
-        <p className="mt-1 text-sm text-ivory/65">Indexed from confirmed service-wallet memos. The chain is the source of truth.</p>
+        <p className="mt-1 text-sm text-ivory/65">Indexed from confirmed service-wallet memos. Solana is the source of truth; SQL keeps this list fast.</p>
         <div className="mt-3 space-y-3">
           {history.map((n) => (
             <HistoryRow key={n.id} note={n} />
@@ -206,6 +209,7 @@ function HistoryRow({ note }: { note: Note }) {
       <p className="mt-2 text-[12px] uppercase tracking-[0.12em] text-ivory/70">
         Memo {mark(note.memoStatus)} · Buy {mark(note.buyStatus)} · Burn {mark(note.burnStatus)}
         {note.usdValue != null ? ` · $${note.usdValue}` : ""}
+        {note.tokenAmount != null ? ` · ${note.tokenAmount} $ORBITX` : ""}
       </p>
       <div className="mt-2 flex flex-wrap gap-3 text-[12px]">
         {note.memoTx ? <SolscanMemoLinks signature={note.memoTx} /> : null}

@@ -129,7 +129,7 @@ export function OnchainActivityFeed({ compact = false }: { compact?: boolean }) 
         <div>
           <p className="kicker">On-chain activity</p>
           <h2 className="font-heading text-2xl text-ivory">{compact ? "Live feed" : "Apogee on-chain activity"}</h2>
-          <p className="mt-1 text-sm text-ivory/70">Confirmed Solana memos, $ORBITX buys, and burns. Nothing is invented.</p>
+          <p className="mt-1 text-sm text-ivory/70">Confirmed Solana memos, $ORBITX buys, and burns — served from SQL when indexed, never invented.</p>
         </div>
       </div>
 

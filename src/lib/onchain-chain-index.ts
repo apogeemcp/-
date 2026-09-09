@@ -197,15 +197,141 @@ export function assembleFromChain(txsNewestFirst: RawServiceTx[]): {
   return {
     notes: newestNotes,
     activity: newestActivity,
-    stats: {
-      totalBurnedUsd: burns.length * NOTE_BURN_USD,
-      orbitxBurned: burns.reduce((s, a) => s + Number(a.token_amount || 0), 0),
-      totalMemos: memos.length,
-      totalBuys: buys.length,
-      solSpent: buys.reduce((s, a) => s + Number(a.usd_value || 0), 0),
-      solSpentNative: newestNotes.reduce((s, n) => s + Number(n.solSpent || 0), 0),
-    },
+    stats: recomputeStats(newestNotes, newestActivity),
   };
+}
+
+export type AssembledChain = ReturnType<typeof assembleFromChain>;
+
+export function recomputeStats(notes: PublicNote[], activity: ChainActivity[]): ChainStats {
+  const burns = activity.filter((a) => a.event_type === "ORBITX_BURN" && a.status === "confirmed");
+  const buys = activity.filter((a) => a.event_type === "ORBITX_PURCHASE" && a.status === "confirmed");
+  const memos = activity.filter((a) => a.event_type === "MEMO_CREATED" && a.status === "confirmed");
+  return {
+    totalBurnedUsd: burns.length * NOTE_BURN_USD,
+    orbitxBurned: burns.reduce((s, a) => s + Number(a.token_amount || 0), 0),
+    totalMemos: memos.length,
+    totalBuys: buys.length,
+    solSpent: buys.reduce((s, a) => s + Number(a.usd_value || 0), 0),
+    solSpentNative: notes.reduce((s, n) => s + Number(n.solSpent || 0), 0),
+  };
+}
+
+const STATUS_RANK: Record<string, number> = { idle: 0, pending: 1, failed: 2, confirmed: 3 };
+
+export function preferOpStatus<T extends string>(a: T, b: T): T {
+  return (STATUS_RANK[a] || 0) >= (STATUS_RANK[b] || 0) ? a : b;
+}
+
+export function mergePublicNotes(a: PublicNote, b: PublicNote): PublicNote {
+  const buyStatus = preferOpStatus(a.buyStatus, b.buyStatus);
+  const burnStatus = preferOpStatus(a.burnStatus, b.burnStatus);
+  const done = buyStatus === "confirmed" && burnStatus === "confirmed";
+  return {
+    ...a,
+    ...b,
+    note: a.note || b.note,
+    memo: a.memo || b.memo,
+    memoStatus: preferOpStatus(a.memoStatus, b.memoStatus),
+    buyStatus,
+    burnStatus,
+    memoTx: b.memoTx || a.memoTx,
+    buyTx: b.buyTx || a.buyTx,
+    burnTx: b.burnTx || a.burnTx,
+    memoUrl: b.memoUrl || a.memoUrl,
+    buyUrl: b.buyUrl || a.buyUrl,
+    burnUrl: b.burnUrl || a.burnUrl,
+    tokenAmount: b.tokenAmount ?? a.tokenAmount,
+    usdValue: b.usdValue ?? a.usdValue,
+    solSpent: b.solSpent ?? a.solSpent,
+    priceUsd: b.priceUsd ?? a.priceUsd,
+    createdAt: a.createdAt <= b.createdAt ? a.createdAt : b.createdAt,
+    memoConfirmedAt: b.memoConfirmedAt || a.memoConfirmedAt,
+    buyConfirmedAt: b.buyConfirmedAt || a.buyConfirmedAt,
+    burnConfirmedAt: b.burnConfirmedAt || a.burnConfirmedAt,
+    error: done ? null : b.error || a.error,
+  };
+}
+
+export function mergeAssembled(left: AssembledChain | null, right: AssembledChain | null): AssembledChain {
+  if (!left) {
+    return right ?? { notes: [], activity: [], stats: recomputeStats([], []) };
+  }
+  if (!right) return left;
+  const notes = new Map<string, PublicNote>();
+  for (const note of [...left.notes, ...right.notes]) {
+    const id = note.memoTx || note.id;
+    const prev = notes.get(id);
+    notes.set(id, prev ? mergePublicNotes(prev, note) : note);
+  }
+  const items = new Map<string, ChainActivity>();
+  for (const row of [...left.activity, ...right.activity]) {
+    const id = row.transaction_signature ? `${row.event_type}:${row.transaction_signature}` : row.id;
+    if (!items.has(id)) items.set(id, { ...row, id });
+  }
+  const noteList = [...notes.values()].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  const actList = [...items.values()].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+  return { notes: noteList, activity: actList, stats: recomputeStats(noteList, actList) };
+}
+
+export function activityEventsForNote(note: PublicNote): ChainActivity[] {
+  const items: ChainActivity[] = [];
+  const at = note.createdAt;
+  if (note.memoTx) {
+    items.push({
+      id: `MEMO_CREATED:${note.memoTx}`,
+      event_type: "MEMO_CREATED",
+      message: "New on-chain memo recorded",
+      note_preview: previewNote(note.note, 200),
+      token_amount: null,
+      usd_value: null,
+      status: note.memoStatus === "confirmed" ? "confirmed" : note.memoStatus === "failed" ? "failed" : "pending",
+      transaction_signature: note.memoTx,
+      related_transaction_signature: null,
+      solscan_url: note.memoUrl || scanUrl(note.memoTx),
+      memo: note.memo,
+      created_at: note.memoConfirmedAt || at,
+      confirmed_at: note.memoConfirmedAt,
+      slot: null,
+    });
+  }
+  if (note.buyTx) {
+    items.push({
+      id: `ORBITX_PURCHASE:${note.buyTx}`,
+      event_type: "ORBITX_PURCHASE",
+      message: "$ORBITX purchased",
+      note_preview: previewNote(note.note, 200),
+      token_amount: note.tokenAmount,
+      usd_value: note.usdValue ?? NOTE_BURN_USD,
+      status: note.buyStatus === "confirmed" ? "confirmed" : note.buyStatus === "failed" ? "failed" : "pending",
+      transaction_signature: note.buyTx,
+      related_transaction_signature: note.memoTx,
+      solscan_url: note.buyUrl || scanUrl(note.buyTx),
+      memo: null,
+      created_at: note.buyConfirmedAt || at,
+      confirmed_at: note.buyConfirmedAt,
+      slot: null,
+    });
+  }
+  if (note.burnTx) {
+    items.push({
+      id: `ORBITX_BURN:${note.burnTx}`,
+      event_type: "ORBITX_BURN",
+      message: "$ORBITX burned permanently",
+      note_preview: previewNote(note.note, 200),
+      token_amount: note.tokenAmount,
+      usd_value: note.usdValue ?? NOTE_BURN_USD,
+      status: note.burnStatus === "confirmed" ? "confirmed" : note.burnStatus === "failed" ? "failed" : "pending",
+      transaction_signature: note.burnTx,
+      related_transaction_signature: note.buyTx || note.memoTx,
+      solscan_url: note.burnUrl || scanUrl(note.burnTx),
+      memo: null,
+      created_at: note.burnConfirmedAt || at,
+      confirmed_at: note.burnConfirmedAt,
+      slot: null,
+    });
+  }
+  return items;
 }
 
 export function spendLast24h(activity: ChainActivity[], notes: PublicNote[]) {

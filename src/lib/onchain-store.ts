@@ -74,9 +74,8 @@ export async function loadSettings(): Promise<SettingsRow> {
     max_daily_sol_spend: defaultDailySolSpend(),
     paused_reason: null,
   };
-  if (!supabaseAdmin()) return fallback;
-  const res = await sbRest<SettingsRow[]>("apogee_onchain_settings?id=eq.1&select=*");
-  const row = asRowArray<SettingsRow>(res.data)[0];
+  const { loadSettingsRow } = await import("./onchain-sql");
+  const row = await loadSettingsRow().catch(() => null);
   if (!row) return fallback;
   return {
     notes_enabled: row.notes_enabled,
@@ -102,10 +101,8 @@ export async function effectiveFlags() {
 }
 
 export async function patchSettings(patch: Partial<SettingsRow>) {
-  return sbRest("apogee_onchain_settings?id=eq.1", {
-    method: "PATCH",
-    body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() }),
-  });
+  const { patchSettingsRow } = await import("./onchain-sql");
+  return patchSettingsRow(patch);
 }
 
 export async function findNoteByIdempotency(key: string): Promise<NoteRow | null> {
