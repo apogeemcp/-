@@ -2,12 +2,21 @@ import { describe, expect, it } from "vitest";
 import {
   EVENT_TYPES,
   MEMO_PREFIX,
+  MEMO_PROGRAM_ID,
   NOTE_BURN_USD,
   NOTE_MAX_CHARS,
   ORBITX_MINT,
   SERVICE_WALLET_PUBLIC,
 } from "../src/lib/onchain-config";
-import { buildMemoText, parseMemoText, sanitizeNote, isIdempotencyKey, previewNote } from "../src/lib/onchain-memo";
+import {
+  buildMemoText,
+  parseMemoText,
+  sanitizeNote,
+  isIdempotencyKey,
+  previewNote,
+  extractMemoFromParsedParts,
+  extractMemoFromLogs,
+} from "../src/lib/onchain-memo";
 import { toolSafety } from "../src/lib/docs";
 import { TOOLS } from "../src/lib/tools";
 import { asRowArray } from "../src/lib/supabase-admin";
@@ -107,5 +116,28 @@ describe("on-chain notes", () => {
     expect(out.notes[0].burnStatus).toBe("confirmed");
     expect(out.activity.map((a) => a.event_type)).toEqual(["ORBITX_BURN", "ORBITX_PURCHASE", "MEMO_CREATED"]);
     expect(out.stats.totalMemos).toBe(1);
+  });
+
+  it("does not treat memo program invoke logs as the note body", () => {
+    const note = "Apogee chain-source smoke — notes live on Solana.";
+    const memo = `${MEMO_PREFIX}${note}`;
+    const logs = [
+      `Program ${MEMO_PROGRAM_ID} invoke [1]`,
+      `Program log: Memo (len ${memo.length}): "${memo}"`,
+      `Program ${MEMO_PROGRAM_ID} success`,
+    ];
+    expect(extractMemoFromLogs(logs)).toBe(memo);
+    expect(extractMemoFromParsedParts({ logs })).toBe(memo);
+    expect(extractMemoFromParsedParts({
+      instructions: [{ programId: MEMO_PROGRAM_ID, parsed: memo }],
+      logs,
+    })).toBe(memo);
+    expect(parseMemoText(extractMemoFromLogs(logs) || "").ok).toBe(true);
+
+    const out = assembleFromChain([
+      { signature: "memosig", slot: 1, blockTime: "2026-09-09T10:09:14.000Z", memo: extractMemoFromLogs(logs), orbitxDelta: 0, solDelta: 0 },
+    ]);
+    expect(out.notes).toHaveLength(1);
+    expect(out.notes[0].note).toBe(note);
   });
 });

@@ -25,6 +25,7 @@ import {
   scanUrl,
   solanaRpc,
 } from "./onchain-config";
+import { extractMemoFromParsedParts } from "./onchain-memo";
 import { loadServiceKeypair, servicePublicAddress } from "./orbitx-signer";
 
 export type ConfirmedTx = {
@@ -269,29 +270,10 @@ export async function readMemoFromSignature(signature: string): Promise<{
   const conn = connection();
   const parsed = await conn.getParsedTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 });
   if (!parsed) return { ok: false, error: "Transaction not found on Solana." };
-  const ixs = parsed.transaction.message.instructions as Array<{ programId?: PublicKey | string; parsed?: { type?: string; info?: { memo?: string } }; data?: string }>;
-  let memo: string | undefined;
-  for (const ix of ixs) {
-    const pid = typeof ix.programId === "string" ? ix.programId : ix.programId?.toBase58?.();
-    if (pid === MEMO_PROGRAM_ID) {
-      if (ix.parsed?.info?.memo) memo = String(ix.parsed.info.memo);
-      else if (ix.data) {
-        try {
-          memo = Buffer.from(ix.data, "base64").toString("utf8");
-        } catch {
-          memo = undefined;
-        }
-      }
-    }
-  }
-  if (!memo) {
-    const logs = parsed.meta?.logMessages || [];
-    const line = logs.find((l) => l.includes("Memo") || l.includes(MEMO_PROGRAM_ID));
-    if (line) memo = line.replace(/^Program log: Memo \(len \d+\): /, "").replace(/^Program log: /, "");
-  }
+  const memo = memoFromParsed(parsed);
   return {
     ok: true,
-    memo,
+    memo: memo || undefined,
     slot: parsed.slot,
     blockTime: parsed.blockTime ? new Date(parsed.blockTime * 1000).toISOString() : null,
   };
@@ -307,28 +289,17 @@ export type RawServiceTx = {
 };
 
 function memoFromParsed(parsed: ParsedTransactionWithMeta): string | null {
-  const outer = (parsed.transaction?.message?.instructions || []) as Array<{
+  const outer = (parsed.transaction.message.instructions || []) as Array<{
     programId?: PublicKey | string;
-    parsed?: { type?: string; info?: { memo?: string } };
+    program?: string;
+    parsed?: unknown;
     data?: string;
   }>;
   const inner = (parsed.meta?.innerInstructions || []).flatMap((g) => g.instructions || []) as typeof outer;
-  for (const ix of [...outer, ...inner]) {
-    const pid = typeof ix.programId === "string" ? ix.programId : ix.programId?.toBase58?.();
-    if (pid !== MEMO_PROGRAM_ID) continue;
-    if (ix.parsed?.info?.memo) return String(ix.parsed.info.memo).replace(/^"|"$/g, "");
-    if (ix.data) {
-      try {
-        return Buffer.from(ix.data, "base64").toString("utf8");
-      } catch {
-        /* continue */
-      }
-    }
-  }
-  const logs = parsed.meta?.logMessages || [];
-  const line = logs.find((l) => l.includes("Memo") || l.includes(MEMO_PROGRAM_ID));
-  if (!line) return null;
-  return line.replace(/^Program log: Memo \(len \d+\): /, "").replace(/^Program log: /, "").replace(/^"|"$/g, "");
+  return extractMemoFromParsedParts({
+    instructions: [...outer, ...inner],
+    logs: parsed.meta?.logMessages,
+  });
 }
 
 function orbitxDeltaForWallet(parsed: ParsedTransactionWithMeta, owner: string): number {
