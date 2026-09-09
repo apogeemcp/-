@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RawOnchainMemo, SolscanMemoLinks } from "./SolscanMemoLinks";
 
 type Activity = {
   id: string;
@@ -13,6 +14,7 @@ type Activity = {
   transaction_signature?: string | null;
   related_transaction_signature?: string | null;
   solscan_url?: string | null;
+  memo?: string | null;
   created_at: string;
   confirmed_at?: string | null;
   slot?: number | null;
@@ -221,6 +223,7 @@ function ActivityCard({ item, flash }: { item: Activity; flash: boolean }) {
               ) : null}
             </blockquote>
           ) : null}
+          {item.event_type === "MEMO_CREATED" && item.memo ? <RawOnchainMemo memo={item.memo} /> : null}
           {item.event_type === "ORBITX_BURN" || item.event_type === "ORBITX_PURCHASE" ? (
             <p className="mt-2 font-mono text-sm text-ivory">
               ${fmtAmt(item.usd_value)} · {fmtAmt(item.token_amount)} $ORBITX
@@ -230,7 +233,9 @@ function ActivityCard({ item, flash }: { item: Activity; flash: boolean }) {
           {item.slot ? <p className="mt-1 font-mono text-[11px] text-ivory/45">Slot {item.slot}</p> : null}
           <p className="mt-1 text-[11px] text-ivory/40">{abs(item.created_at)}</p>
           <div className="mt-3 flex flex-wrap gap-3 text-[12px]">
-            {href && item.transaction_signature ? (
+            {item.transaction_signature ? (
+              <SolscanMemoLinks signature={item.transaction_signature} />
+            ) : href ? (
               <a className="text-ember hover:text-ivory" href={href} target="_blank" rel="noreferrer">
                 {item.event_type === "ORBITX_BURN" ? "View burn →" : item.event_type === "ORBITX_PURCHASE" ? "View buy →" : "View on Solscan →"}
               </a>

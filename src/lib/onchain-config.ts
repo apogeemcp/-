@@ -1,5 +1,5 @@
 import { PROJECT_CA } from "./site";
-import { solanaRpcUrl, solscanTxUrl } from "./solana-pay";
+import { solanaRpcUrl, solscanMemoViews, solscanTxUrl } from "./solana-pay";
 
 export const ORBITX_MINT = process.env.ORBITX_MINT?.trim() || PROJECT_CA;
 export const MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
@@ -31,6 +31,8 @@ export function solanaRpc(): string {
 export function scanUrl(signature: string): string {
   return solscanTxUrl(signature);
 }
+
+export { solscanMemoViews };
 
 function envBool(name: string): boolean | null {
   const raw = process.env[name]?.trim().toLowerCase();

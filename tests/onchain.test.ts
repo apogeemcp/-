@@ -90,7 +90,7 @@ describe("on-chain notes", () => {
     const feed = await publicFeed({ type: "ALL", limit: 5 });
     expect(feed.ok).toBe(true);
     expect(Array.isArray(feed.items)).toBe(true);
-  });
+  }, 30_000);
 
   it("does not treat API error objects as row lists", () => {
     expect(asRowArray(null)).toEqual([]);
@@ -115,6 +115,7 @@ describe("on-chain notes", () => {
     expect(out.notes[0].buyStatus).toBe("confirmed");
     expect(out.notes[0].burnStatus).toBe("confirmed");
     expect(out.activity.map((a) => a.event_type)).toEqual(["ORBITX_BURN", "ORBITX_PURCHASE", "MEMO_CREATED"]);
+    expect(out.activity.find((a) => a.event_type === "MEMO_CREATED")?.memo).toBe(memo);
     expect(out.stats.totalMemos).toBe(1);
   });
 

@@ -21,6 +21,18 @@ export function solscanTxUrl(signature: string): string {
   return `https://solscan.io/tx/${signature}`;
 }
 
+/** Solscan hides memos off Overview. These tabs show UTF-8 instruction data, logs, and raw bytes. */
+export function solscanMemoViews(signature: string, account?: string) {
+  const tx = solscanTxUrl(signature);
+  return {
+    tx,
+    instructions: `${tx}?tab=instructions`,
+    logs: `${tx}?tab=programLogs`,
+    raw: `${tx}?tab=raw`,
+    account: account ? `https://solscan.io/account/${account}#transactions` : null,
+  };
+}
+
 export function parseSolscanInput(raw: string): { ok: true; signature: string } | { ok: false; error: string } {
   const value = String(raw || "").trim();
   if (!value) return { ok: false, error: "Paste a Solscan transaction link or signature." };

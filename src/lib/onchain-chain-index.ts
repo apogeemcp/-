@@ -47,6 +47,7 @@ export type ChainActivity = {
   transaction_signature: string | null;
   related_transaction_signature: string | null;
   solscan_url: string | null;
+  memo: string | null;
   created_at: string;
   confirmed_at: string | null;
   slot: number | null;
@@ -108,6 +109,7 @@ function activity(
     transaction_signature: tx.signature,
     related_transaction_signature: extra.related_transaction_signature ?? null,
     solscan_url: scanUrl(tx.signature),
+    memo: extra.memo ?? (type === "MEMO_CREATED" ? tx.memo : null),
     created_at: at,
     confirmed_at: at,
     slot: tx.slot,

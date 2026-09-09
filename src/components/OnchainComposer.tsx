@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { NOTE_MAX_CHARS } from "@/lib/onchain-config";
+import { NOTE_MAX_CHARS, SERVICE_WALLET_PUBLIC } from "@/lib/onchain-config";
 import { useWallet } from "./WalletProvider";
+import { RawOnchainMemo, SolscanMemoLinks } from "./SolscanMemoLinks";
 
 type Note = {
   id: string;
   note: string;
+  memo: string;
   memoStatus: string;
   buyStatus: string;
   burnStatus: string;
@@ -170,6 +172,7 @@ function NoteReceipt({ note }: { note: Note }) {
     <div className="panel rounded-2xl border-emerald-500/30 p-5">
       <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-300">{done ? "✓ Recorded on Solana" : "Broadcasting…"}</p>
       <blockquote className="mt-2 text-ivory">«{note.note}»</blockquote>
+      {note.memo ? <RawOnchainMemo memo={note.memo} /> : null}
       <dl className="mt-3 grid gap-1 font-mono text-[12px] text-ivory/75">
         <div>Signature · {note.memoTx || "pending"}</div>
         <div>Time · {new Date(note.createdAt).toLocaleString()}</div>
@@ -178,9 +181,17 @@ function NoteReceipt({ note }: { note: Note }) {
       </dl>
       {note.error ? <p className="mt-2 text-sm text-flare">{note.error}</p> : null}
       <div className="mt-3 flex flex-wrap gap-3 text-sm">
-        {note.memoUrl ? <a className="text-ember" href={note.memoUrl} target="_blank" rel="noreferrer">Memo TX →</a> : null}
-        {note.buyUrl ? <a className="text-ember" href={note.buyUrl} target="_blank" rel="noreferrer">Buy TX →</a> : null}
-        {note.burnUrl ? <a className="text-ember" href={note.burnUrl} target="_blank" rel="noreferrer">Burn TX →</a> : null}
+        {note.memoTx ? <SolscanMemoLinks signature={note.memoTx} wallet={SERVICE_WALLET_PUBLIC} /> : null}
+        {note.buyUrl ? (
+          <a className="text-ember" href={note.buyUrl} target="_blank" rel="noreferrer">
+            Buy TX →
+          </a>
+        ) : null}
+        {note.burnUrl ? (
+          <a className="text-ember" href={note.burnUrl} target="_blank" rel="noreferrer">
+            Burn TX →
+          </a>
+        ) : null}
       </div>
     </div>
   );
@@ -190,15 +201,24 @@ function HistoryRow({ note }: { note: Note }) {
   return (
     <article className="panel rounded-xl p-4">
       <p className="text-sm text-ivory">«{note.note}»</p>
+      {note.memo ? <RawOnchainMemo memo={note.memo} /> : null}
       <p className="mt-1 text-[11px] text-ivory/45">{new Date(note.createdAt).toLocaleString()}</p>
       <p className="mt-2 text-[12px] uppercase tracking-[0.12em] text-ivory/70">
         Memo {mark(note.memoStatus)} · Buy {mark(note.buyStatus)} · Burn {mark(note.burnStatus)}
         {note.usdValue != null ? ` · $${note.usdValue}` : ""}
       </p>
       <div className="mt-2 flex flex-wrap gap-3 text-[12px]">
-        {note.memoUrl ? <a className="text-ember" href={note.memoUrl} target="_blank" rel="noreferrer">View memo</a> : null}
-        {note.buyUrl ? <a className="text-ember" href={note.buyUrl} target="_blank" rel="noreferrer">View buy</a> : null}
-        {note.burnUrl ? <a className="text-ember" href={note.burnUrl} target="_blank" rel="noreferrer">View burn</a> : null}
+        {note.memoTx ? <SolscanMemoLinks signature={note.memoTx} /> : null}
+        {note.buyUrl ? (
+          <a className="text-ember" href={note.buyUrl} target="_blank" rel="noreferrer">
+            View buy
+          </a>
+        ) : null}
+        {note.burnUrl ? (
+          <a className="text-ember" href={note.burnUrl} target="_blank" rel="noreferrer">
+            View burn
+          </a>
+        ) : null}
       </div>
     </article>
   );
