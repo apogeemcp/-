@@ -92,6 +92,9 @@ export function OnchainAdmin({ secret }: { secret: string }) {
               Burn held $ORBITX
             </button>
           </div>
+          <p className="mt-2 text-[11px] text-ivory/50">
+            Pending buy/burn retries after each note, from Retry pending, and once daily via Vercel (Hobby cron limit).
+          </p>
           <form
             className="mt-3 flex flex-wrap gap-2"
             onSubmit={(e) => {

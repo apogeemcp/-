@@ -6,6 +6,8 @@ import { recoverPending } from "@/lib/onchain-service";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+/** Hobby Vercel only allows a daily cron. Writes also resume buy/burn immediately. */
+
 function authorized(req: NextRequest) {
   const cron = process.env.CRON_SECRET?.trim();
   const given = req.headers.get("x-cron-secret") || "";

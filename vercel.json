@@ -4,5 +4,5 @@
   "buildCommand": "next build",
   "outputDirectory": null,
   "rewrites": [{ "source": "/mcp", "destination": "/api/mcp" }],
-  "crons": [{ "path": "/api/onchain/recover", "schedule": "*/15 * * * *" }]
+  "crons": [{ "path": "/api/onchain/recover", "schedule": "0 6 * * *" }]
 }
