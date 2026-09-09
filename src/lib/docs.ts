@@ -281,6 +281,15 @@ export const DATA_PROVIDERS = [
     limits: "Often Cloudflare 403 from some hosts. Apogee then returns empty proxies rather than invented ledgers.",
   },
   {
+    name: "Postgres (on-chain notes index)",
+    url: "https://supabase.com",
+    provides: "Indexed memos, buy/burn activity, service-wallet SOL/$ORBITX balances, and $ORBITX price for the website.",
+    why: "Solana RPC is the write/source of truth. Direct SQL (DATABASE_URL) keeps the UI from waiting on 429s. No Supabase JWT.",
+    realtime: "Written when a memo/buy/burn confirms; served immediately on later polls.",
+    cache: "Wallet/price snapshot reused ~20s; feed served from SQL while chain refreshes in the background.",
+    limits: "Requires POSTGRES_URL / DATABASE_URL on the host. Missing URL falls back to live chain scans.",
+  },
+  {
     name: "pons factories (on-chain)",
     url: "https://www.ponsfamily.com/launchpad",
     provides: "TokenLaunched logs, curve/graduation state, unsigned launch helpers.",
@@ -301,6 +310,7 @@ export const FRESHNESS = [
   { category: "Stock Token registry", value: "RHJ /assets cached ~10 minutes." },
   { category: "pons launches", value: "Factory logs, list cached ~20 seconds." },
   { category: "ETH-USD (launch helpers)", value: "Cached ~60 seconds." },
+  { category: "On-chain notes / $ORBITX wallet", value: "Solana is source of truth. Postgres (DATABASE_URL, no JWT) indexes memos, burns, SOL, and price so the UI does not wait on RPC." },
 ] as const;
 
 export const RPC_ERRORS = [
@@ -414,6 +424,7 @@ export const CHANGELOG = [
       "Technical whitepaper, data usage, availability, expanded terms and privacy.",
       "MCP access intent page (public auth none; $ORBITX burn gating not live).",
       "Partnership request form (service-role write, RLS, no public read).",
+      "Postgres index for on-chain notes (DATABASE_URL, no Supabase JWT) so memo/price/wallet stay on the UI when RPC is slow.",
     ],
     changed: ["Site copy stays Apogee (not a rebrand). Orbit remains the in-app assistant."],
     fixed: [],

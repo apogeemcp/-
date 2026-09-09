@@ -17,7 +17,7 @@ export default function OnchainNotesPage() {
         kicker="On-chain notes"
         title="Write permanent notes directly to Solana"
         focus="desk"
-        lede="The Apogee service wallet records your text as a Solana memo, then buys and burns about $0.02 of $ORBITX. The page reads those confirmed transactions from chain. Nothing is fabricated."
+        lede="The Apogee service wallet records your text as a Solana memo, then buys and burns about $0.02 of $ORBITX. Confirmed transactions are indexed in Postgres so this page stays fast when RPC is slow. Nothing is fabricated."
       />
       <PageFrame>
         <GuidePanel title={GUIDES.onchain.title} body={GUIDES.onchain.body} href="/developers/onchain" />

@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: { unoptimized: true },
   eslint: { ignoreDuringBuilds: true },
+  serverExternalPackages: ["pg"],
   async headers() {
     return [
       {

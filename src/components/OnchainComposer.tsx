@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { NOTE_MAX_CHARS, SERVICE_WALLET_PUBLIC } from "@/lib/onchain-config";
+import { readResponseJson } from "@/lib/read-json";
 import { useWallet } from "./WalletProvider";
 import { RawOnchainMemo, SolscanMemoLinks } from "./SolscanMemoLinks";
 
@@ -20,6 +21,7 @@ type Note = {
   burnUrl: string | null;
   tokenAmount: number | null;
   usdValue: number | null;
+  priceUsd?: number | null;
   createdAt: string;
   error: string | null;
 };
@@ -32,6 +34,8 @@ type WalletInfo = {
   autoBurnEnabled: boolean;
   noteBurnUsd: number;
   estimatedSolForNote: number | null;
+  marketPriceUsd?: number | null;
+  sqlReady?: boolean;
   stats?: { totalMemos?: number };
 };
 
@@ -54,20 +58,24 @@ export function OnchainComposer() {
   const remaining = NOTE_MAX_CHARS - text.length;
 
   async function refresh() {
-    const [w, h] = await Promise.all([
-      fetch("/api/onchain/wallet").then((r) => r.json()),
-      fetch("/api/onchain/notes?limit=20").then((r) => r.json()),
-    ]);
-    setInfo((prev) => {
-      if (!w?.ok) return prev;
-      if (prev && Number(w.sol || 0) === 0 && prev.sol > 0) return { ...w, sol: prev.sol };
-      return w;
-    });
-    setHistory((prev) => {
-      const rows = Array.isArray(h.items) ? (h.items as Note[]) : [];
-      if (rows.length === 0 && prev.length > 0) return prev;
-      return rows;
-    });
+    try {
+      const [w, h] = await Promise.all([
+        fetch("/api/onchain/wallet").then((r) => readResponseJson<WalletInfo & { ok?: boolean }>(r)),
+        fetch("/api/onchain/notes?limit=20").then((r) => readResponseJson<{ items?: Note[] }>(r)),
+      ]);
+      setInfo((prev) => {
+        if (!w?.ok) return prev;
+        if (prev && Number(w.sol || 0) === 0 && prev.sol > 0) return { ...w, sol: prev.sol };
+        return w;
+      });
+      setHistory((prev) => {
+        const rows = Array.isArray(h.items) ? (h.items as Note[]) : [];
+        if (rows.length === 0 && prev.length > 0) return prev;
+        return rows;
+      });
+    } catch {
+      /* keep last-good composer state */
+    }
   }
 
   useEffect(() => {
@@ -79,11 +87,17 @@ export function OnchainComposer() {
   useEffect(() => {
     if (!last?.id) return;
     if (last.memoStatus === "confirmed" && last.buyStatus === "confirmed" && last.burnStatus === "confirmed") return;
+    if (last.buyStatus === "failed" || last.burnStatus === "failed") return;
     const t = setInterval(async () => {
-      const res = await fetch(`/api/onchain/notes/${encodeURIComponent(last.id)}?resume=1`);
-      const json = await res.json();
-      if (json.note) setLast(json.note);
-    }, 5000);
+      try {
+        const resume = last.buyStatus === "idle" || last.burnStatus === "idle" ? "?resume=1" : "";
+        const res = await fetch(`/api/onchain/notes/${encodeURIComponent(last.id)}${resume}`);
+        const json = await readResponseJson<{ note?: Note }>(res);
+        if (json.note) setLast(json.note);
+      } catch {
+        /* keep the receipt we already have */
+      }
+    }, 8000);
     return () => clearInterval(t);
   }, [last?.id, last?.memoStatus, last?.buyStatus, last?.burnStatus]);
 
@@ -103,8 +117,9 @@ export function OnchainComposer() {
           wallet: verified ? address : undefined,
         }),
       });
-      const json = await res.json();
+      const json = await readResponseJson<{ error?: string; note?: Note }>(res);
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      if (!json.note) throw new Error("Memo was sent but the receipt was empty. Refresh the feed.");
       setLast(json.note);
       setText("");
       await refresh();
@@ -135,7 +150,7 @@ export function OnchainComposer() {
         </div>
         <div className="mt-3 grid gap-2 text-[12px] text-ivory/70 sm:grid-cols-3">
           <p>Service wallet · {info?.wallet ? `${info.wallet.slice(0, 4)}…${info.wallet.slice(-4)}` : "—"}</p>
-          <p>Network · Solana mainnet</p>
+          <p>$ORBITX · {info?.marketPriceUsd != null ? `$${Number(info.marketPriceUsd).toPrecision(4)}` : "pending market"}</p>
           <p>Notes recorded · {info?.stats?.totalMemos ?? 0}</p>
         </div>
         <p className="mt-3 text-[12px] text-ivory/55">
@@ -154,7 +169,7 @@ export function OnchainComposer() {
 
       <section>
         <h3 className="font-heading text-xl text-ivory">Note history</h3>
-        <p className="mt-1 text-sm text-ivory/65">Indexed from confirmed service-wallet memos. The chain is the source of truth.</p>
+        <p className="mt-1 text-sm text-ivory/65">Indexed from confirmed service-wallet memos. Solana is the source of truth; SQL keeps this list fast.</p>
         <div className="mt-3 space-y-3">
           {history.map((n) => (
             <HistoryRow key={n.id} note={n} />
@@ -206,6 +221,7 @@ function HistoryRow({ note }: { note: Note }) {
       <p className="mt-2 text-[12px] uppercase tracking-[0.12em] text-ivory/70">
         Memo {mark(note.memoStatus)} · Buy {mark(note.buyStatus)} · Burn {mark(note.burnStatus)}
         {note.usdValue != null ? ` · $${note.usdValue}` : ""}
+        {note.tokenAmount != null ? ` · ${note.tokenAmount} $ORBITX` : ""}
       </p>
       <div className="mt-2 flex flex-wrap gap-3 text-[12px]">
         {note.memoTx ? <SolscanMemoLinks signature={note.memoTx} /> : null}

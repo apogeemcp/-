@@ -36,7 +36,10 @@ export type ConfirmedTx = {
 };
 
 function connection(): Connection {
-  return new Connection(solanaRpc(), { commitment: "confirmed" });
+  return new Connection(solanaRpc(), {
+    commitment: "confirmed",
+    disableRetryOnRateLimit: true,
+  });
 }
 
 export async function getRecentFeeSol(): Promise<number> {

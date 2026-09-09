@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RawOnchainMemo, SolscanMemoLinks } from "./SolscanMemoLinks";
+import { readResponseJson } from "@/lib/read-json";
 
 type Activity = {
   id: string;
@@ -81,7 +82,7 @@ export function OnchainActivityFeed({ compact = false }: { compact?: boolean }) 
       if (!silent) setBusy(true);
       try {
         const res = await fetch(`/api/onchain/activity?type=${tab}&limit=24&offset=${nextOffset}`);
-        const json = await res.json();
+        const json = await readResponseJson<{ items?: Activity[]; stats?: Stats | null }>(res);
         const rows = (json.items || []) as Activity[];
         setStats((prev) => {
           const incoming = json.stats || null;
@@ -105,6 +106,8 @@ export function OnchainActivityFeed({ compact = false }: { compact?: boolean }) 
           }
           return merged;
         });
+      } catch {
+        /* keep the last good feed */
       } finally {
         setBusy(false);
       }
@@ -129,7 +132,7 @@ export function OnchainActivityFeed({ compact = false }: { compact?: boolean }) 
         <div>
           <p className="kicker">On-chain activity</p>
           <h2 className="font-heading text-2xl text-ivory">{compact ? "Live feed" : "Apogee on-chain activity"}</h2>
-          <p className="mt-1 text-sm text-ivory/70">Confirmed Solana memos, $ORBITX buys, and burns. Nothing is invented.</p>
+          <p className="mt-1 text-sm text-ivory/70">Confirmed Solana memos, $ORBITX buys, and burns — served from SQL when indexed, never invented.</p>
         </div>
       </div>
 

@@ -3,6 +3,7 @@
   "framework": "nextjs",
   "buildCommand": "next build",
   "outputDirectory": null,
+  "ignoreCommand": "[ \"$VERCEL_ENV\" != \"production\" ]",
   "rewrites": [{ "source": "/mcp", "destination": "/api/mcp" }],
   "crons": [{ "path": "/api/onchain/recover", "schedule": "0 6 * * *" }]
 }

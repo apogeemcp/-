@@ -20,7 +20,10 @@ import {
 import { toolSafety } from "../src/lib/docs";
 import { TOOLS } from "../src/lib/tools";
 import { asRowArray } from "../src/lib/supabase-admin";
-import { assembleFromChain, preferAssembledScan } from "../src/lib/onchain-chain-index";
+import { assembleFromChain, mergeAssembled, preferAssembledScan } from "../src/lib/onchain-chain-index";
+import { postgresUrlFromEnv } from "../src/lib/pg-pool";
+import { activityFromSqlRow, publicNoteFromSqlRow } from "../src/lib/onchain-sql";
+import { plainTextError, readResponseJson } from "../src/lib/read-json";
 
 describe("on-chain notes", () => {
   it("validates and prefixes memos", () => {
@@ -154,5 +157,85 @@ describe("on-chain notes", () => {
       { signature: "newsig", slot: 2, blockTime: "2026-09-09T10:10:00.000Z", memo: "ORBITX_NOTE:v1:fresh", orbitxDelta: 0, solDelta: 0 },
     ]);
     expect(preferAssembledScan(good, newer, { requested: 2, fetched: 2 }).notes[0].note).toBe("fresh");
+  });
+
+  it("picks a Postgres URL and ignores JWTs", () => {
+    expect(postgresUrlFromEnv({ SUPABASE_SERVICE_ROLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.x" })).toBeNull();
+    expect(postgresUrlFromEnv({ DATABASE_URL: "postgres://user:pass@localhost:5432/apogee" })).toBe(
+      "postgres://user:pass@localhost:5432/apogee",
+    );
+    expect(
+      postgresUrlFromEnv({
+        POSTGRES_URL: "postgresql://pooler",
+        POSTGRES_URL_NON_POOLING: "postgres://direct",
+      }),
+    ).toBe("postgres://direct");
+  });
+
+  it("maps SQL rows to public notes without using JWT fields", () => {
+    const note = publicNoteFromSqlRow({
+      memo_tx: "memosig",
+      note: "hello sql",
+      memo_text: "ORBITX_NOTE:v1:hello sql",
+      source: "chain",
+      wallet: SERVICE_WALLET_PUBLIC,
+      memo_status: "confirmed",
+      buy_status: "confirmed",
+      burn_status: "confirmed",
+      buy_tx: "buysig",
+      burn_tx: "burnsig",
+      token_amount: "123.4",
+      usd_value: "0.02",
+      sol_spent: "0.0002",
+      price_usd: "0.00001",
+      created_at: "2026-09-09T10:00:01.000Z",
+      memo_confirmed_at: "2026-09-09T10:00:01.000Z",
+      buy_confirmed_at: "2026-09-09T10:00:02.000Z",
+      burn_confirmed_at: "2026-09-09T10:00:03.000Z",
+      error: null,
+    });
+    expect(note?.id).toBe("memosig");
+    expect(note?.note).toBe("hello sql");
+    expect(note?.tokenAmount).toBe(123.4);
+    expect(note?.usdValue).toBe(0.02);
+    expect(note?.priceUsd).toBe(0.00001);
+    expect(note?.buyTx).toBe("buysig");
+    const event = activityFromSqlRow({
+      event_type: "MEMO_CREATED",
+      transaction_signature: "memosig",
+      message: "New on-chain memo recorded",
+      memo: "ORBITX_NOTE:v1:hello sql",
+      status: "confirmed",
+      created_at: "2026-09-09T10:00:01.000Z",
+      usd_value: null,
+      token_amount: null,
+    });
+    expect(event.id).toBe("MEMO_CREATED:memosig");
+    expect(event.memo).toBe("ORBITX_NOTE:v1:hello sql");
+  });
+
+  it("merges a SQL index with a later chain scan instead of dropping memos", () => {
+    const sql = assembleFromChain([
+      { signature: "memosig", slot: 1, blockTime: "2026-09-09T10:00:01.000Z", memo: "ORBITX_NOTE:v1:keep me", orbitxDelta: 0, solDelta: 0 },
+    ]);
+    const chain = assembleFromChain([
+      { signature: "burnsig", slot: 3, blockTime: "2026-09-09T10:00:03.000Z", memo: null, orbitxDelta: -10, solDelta: 0 },
+      { signature: "buysig", slot: 2, blockTime: "2026-09-09T10:00:02.000Z", memo: null, orbitxDelta: 10, solDelta: -0.0001 },
+      { signature: "memosig", slot: 1, blockTime: "2026-09-09T10:00:01.000Z", memo: "ORBITX_NOTE:v1:keep me", orbitxDelta: 0, solDelta: 0 },
+    ]);
+    const merged = mergeAssembled(sql, chain);
+    expect(merged.notes[0].note).toBe("keep me");
+    expect(merged.notes[0].buyTx).toBe("buysig");
+    expect(merged.notes[0].burnTx).toBe("burnsig");
+    expect(merged.stats.totalMemos).toBe(1);
+  });
+
+  it("turns Vercel timeout text into a usable error instead of a JSON parse crash", async () => {
+    expect(plainTextError("An error occurred with your application.", 500)).toMatch(/timed out/i);
+    const res = new Response("An error occurred with your application.", {
+      status: 504,
+      headers: { "content-type": "text/plain" },
+    });
+    await expect(readResponseJson(res)).rejects.toThrow(/timed out/i);
   });
 });
