@@ -76,6 +76,10 @@ export const GUIDES = {
     title: "Understanding this token",
     body: "Header is on-chain + DexScreener + Gecko metadata. Chart is GeckoTerminal OHLCV. Buys/sells are pool trades. Holders and burns are proxies. Copy CA is the full contract.",
   },
+  onchain: {
+    title: "How on-chain notes work",
+    body: "You write text. The backend signs a Solana memo, waits for confirmation, then buys about $0.02 of $ORBITX and burns it. The public feed only shows confirmed transactions with Solscan links.",
+  },
 } as const;
 
 export const FAQ = [
@@ -142,6 +146,10 @@ export const FAQ = [
       {
         q: "Do I need $ORBITX to use MCP?",
         a: "No. Live MCP is auth none. Optional paid plans: send SOL or USDC to the published Solana treasury, then paste the Solscan tx link. 25% is allocated to a manual $ORBITX buy-and-burn after payment. Do not pay any other address.",
+      },
+      {
+        q: "What are on-chain notes?",
+        a: "write_onchain_note records a public Solana memo from the Apogee service wallet, then queues about $0.02 of $ORBITX buy-and-burn. The feed on /onchain-notes shows confirmed signatures only. Do not put secrets in a memo.",
       },
       {
         q: "Can I embed Apogee in my own product?",

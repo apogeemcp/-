@@ -75,6 +75,7 @@ describe("coordinated copy", () => {
     expect(TABS.map((t) => t.href)).toEqual(["/", "/dashboard", "/launches", "/orbit", "/wallet"]);
     expect(TABS.map((t) => t.label)).toEqual(["Home", "Desk", "Launch", "Orbit", "Profile"]);
     expect(MORE_LINKS.map((l) => l.href)).toEqual([
+      "/onchain-notes",
       "/developers",
       "/connect",
       "/analytics",

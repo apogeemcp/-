@@ -8,7 +8,8 @@ Internal gate for Apogee (`apogeemcp.digital`). Do not claim a box is done unles
 - Chain is EIP-155 **4663**, DexScreener/Gecko slug **`robinhood`**.
 - MCP is Streamable HTTP `POST /api/mcp` (alias `/mcp`), protocol `2025-03-26`, **`auth: none`**.
 - There are **no user accounts**, OAuth, API keys, paid MCP tiers, or cost-basis PnL.
-- `$ORBITX` burn-gated access is documented intent on `/developers/access`, not a live shop. Do not fake burns.
+- `$ORBITX` MCP-access buy-and-burn after treasury payment stays **manual** until an admin records a burn signature.
+- On-chain notes (`/onchain-notes`) are a separate service-wallet flow: real Solana memos + optional ~$0.02 $ORBITX buy/burn. Requires `ORBITX_SERVICE_PRIVATE_KEY` on Vercel. Never put that key in git, Supabase, or the client.
 - GitHub is `https://github.com/apogeemcp/-`. Project CA is copy-only — no invented explorer.
 
 ## Gate
@@ -16,7 +17,8 @@ Internal gate for Apogee (`apogeemcp.digital`). Do not claim a box is done unles
 - [ ] `npm test` passes
 - [ ] `npx tsc --noEmit` passes
 - [ ] `npm run build` succeeds
-- [ ] Database migrations in `supabase/migrations/` applied (usage + scan log; RLS on, no public write policies)
+- [ ] On-chain notes: `20260909010000_onchain_notes.sql` applied; activity SELECT for anon; service role writes
+- [ ] `ORBITX_SERVICE_PRIVATE_KEY` set on Vercel only; public wallet funded with SOL before enabling auto-burn
 - [ ] Usage writes only with `SUPABASE_SERVICE_ROLE_KEY` (no anon-key fallback)
 - [ ] MCP `tools/list` matches `src/lib/tools.ts`; catalog aliases via `search_catalog` / `run_tool` (nesting capped)
 - [ ] Rate limit headers present on MCP POST, REST tools, `/api/agent`, `/api/usage`

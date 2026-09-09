@@ -32,7 +32,11 @@ export function clientIp(req: Request): string {
   return "unknown";
 }
 
-export function consumeRateLimit(ip: string): {
+export function consumeNamedLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+): {
   ok: boolean;
   remaining: number;
   resetAt: number;
@@ -40,18 +44,27 @@ export function consumeRateLimit(ip: string): {
 } {
   const now = Date.now();
   prune(now);
-  let bucket = buckets.get(ip);
+  let bucket = buckets.get(key);
   if (!bucket || now >= bucket.resetAt) {
-    bucket = { count: 0, resetAt: now + RATE_LIMIT.windowMs };
-    buckets.set(ip, bucket);
+    bucket = { count: 0, resetAt: now + windowMs };
+    buckets.set(key, bucket);
   }
   bucket.count += 1;
-  const remaining = Math.max(0, RATE_LIMIT.limit - bucket.count);
+  const remaining = Math.max(0, limit - bucket.count);
   const retryAfterSec = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
-  if (bucket.count > RATE_LIMIT.limit) {
+  if (bucket.count > limit) {
     return { ok: false, remaining: 0, resetAt: bucket.resetAt, retryAfterSec };
   }
   return { ok: true, remaining, resetAt: bucket.resetAt, retryAfterSec };
+}
+
+export function consumeRateLimit(ip: string): {
+  ok: boolean;
+  remaining: number;
+  resetAt: number;
+  retryAfterSec: number;
+} {
+  return consumeNamedLimit(ip, RATE_LIMIT.limit, RATE_LIMIT.windowMs);
 }
 
 export function rateLimitHeaders(result: ReturnType<typeof consumeRateLimit>): HeadersInit {

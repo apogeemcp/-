@@ -32,6 +32,9 @@ export default function HomePage() {
             <Link href="/dashboard" className="btn-ember">
               Open Desk
             </Link>
+            <Link href="/onchain-notes" className="btn-ghost">
+              On-chain notes
+            </Link>
             <InstallApp />
           </div>
           <p className="mt-6 font-mono text-xs text-ember">{CANONICAL_MCP}</p>
