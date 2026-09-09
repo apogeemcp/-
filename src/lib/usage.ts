@@ -1,17 +1,12 @@
 import { supabaseAnonKey, supabaseUrl } from "./site";
+import { adminRestHeaders, supabaseAdmin } from "./supabase-admin";
 
 export function logUsage(tool: string, query: string | undefined, ok: boolean) {
-  const url = supabaseUrl();
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return;
-  void fetch(`${url}/rest/v1/apogee_usage`, {
+  const admin = supabaseAdmin();
+  if (!admin) return;
+  void fetch(`${admin.url}/rest/v1/apogee_usage`, {
     method: "POST",
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
+    headers: adminRestHeaders({ Prefer: "return=minimal" }),
     body: JSON.stringify({ tool, query: query ? query.slice(0, 200) : null, ok }),
   }).catch(() => {});
 }

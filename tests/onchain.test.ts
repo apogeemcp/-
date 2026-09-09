@@ -10,7 +10,7 @@ import {
 import { buildMemoText, parseMemoText, sanitizeNote, isIdempotencyKey, previewNote } from "../src/lib/onchain-memo";
 import { toolSafety } from "../src/lib/docs";
 import { TOOLS } from "../src/lib/tools";
-import { asRowArray } from "../src/lib/supabase-admin";
+import { asRowArray, inspectServiceKey, normalizeServiceKey } from "../src/lib/supabase-admin";
 
 describe("on-chain notes", () => {
   it("validates and prefixes memos", () => {
@@ -87,5 +87,26 @@ describe("on-chain notes", () => {
     expect(asRowArray(undefined)).toEqual([]);
     expect(asRowArray({ hint: "Use a JWT", message: "Invalid API key" })).toEqual([]);
     expect(asRowArray([{ usd_value: 0.02, sol_spent: 0.0001 }])).toEqual([{ usd_value: 0.02, sol_spent: 0.0001 }]);
+  });
+
+  it("accepts secret keys and rejects anon/publishable as the admin client", () => {
+    expect(normalizeServiceKey('  "sb_secret_abc"  ')).toBe("sb_secret_abc");
+    expect(inspectServiceKey("sb_secret_abc").kind).toBe("secret");
+    expect(inspectServiceKey("sb_secret_abc").issue).toBeNull();
+    expect(inspectServiceKey("sb_publishable_abc").kind).toBe("publishable");
+    expect(inspectServiceKey("sb_publishable_abc").issue).toMatch(/publishable/);
+    const anon = [
+      Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"),
+      Buffer.from(JSON.stringify({ role: "anon", ref: "paxtohwiycuhwmlziwrr" })).toString("base64url"),
+      "sig",
+    ].join(".");
+    expect(inspectServiceKey(anon).kind).toBe("anon");
+    const service = [
+      Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"),
+      Buffer.from(JSON.stringify({ role: "service_role", ref: "paxtohwiycuhwmlziwrr" })).toString("base64url"),
+      "sig",
+    ].join(".");
+    expect(inspectServiceKey(`Bearer ${service}`).kind).toBe("service_role");
+    expect(inspectServiceKey(service).issue).toBeNull();
   });
 });
