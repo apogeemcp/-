@@ -296,4 +296,111 @@ export async function readMemoFromSignature(signature: string): Promise<{
   };
 }
 
+export type RawServiceTx = {
+  signature: string;
+  slot: number | null;
+  blockTime: string | null;
+  memo: string | null;
+  orbitxDelta: number;
+  solDelta: number;
+};
+
+function memoFromParsed(parsed: {
+  transaction?: { message?: { instructions?: unknown[] } };
+  meta?: { logMessages?: string[] | null; innerInstructions?: Array<{ instructions?: unknown[] }> | null };
+}): string | null {
+  const outer = (parsed.transaction?.message?.instructions || []) as Array<{
+    programId?: PublicKey | string;
+    parsed?: { type?: string; info?: { memo?: string } };
+    data?: string;
+  }>;
+  const inner = (parsed.meta?.innerInstructions || []).flatMap((g) => g.instructions || []) as typeof outer;
+  for (const ix of [...outer, ...inner]) {
+    const pid = typeof ix.programId === "string" ? ix.programId : ix.programId?.toBase58?.();
+    if (pid !== MEMO_PROGRAM_ID) continue;
+    if (ix.parsed?.info?.memo) return String(ix.parsed.info.memo).replace(/^"|"$/g, "");
+    if (ix.data) {
+      try {
+        return Buffer.from(ix.data, "base64").toString("utf8");
+      } catch {
+        /* continue */
+      }
+    }
+  }
+  const logs = parsed.meta?.logMessages || [];
+  const line = logs.find((l) => l.includes("Memo") || l.includes(MEMO_PROGRAM_ID));
+  if (!line) return null;
+  return line.replace(/^Program log: Memo \(len \d+\): /, "").replace(/^Program log: /, "").replace(/^"|"$/g, "");
+}
+
+function orbitxDeltaForWallet(
+  parsed: {
+    meta?: {
+      preTokenBalances?: Array<{ mint?: string; owner?: string; uiTokenAmount?: { uiAmount?: number | null } }>;
+      postTokenBalances?: Array<{ mint?: string; owner?: string; uiTokenAmount?: { uiAmount?: number | null } }>;
+    };
+  },
+  owner: string,
+): number {
+  const sum = (
+    rows: Array<{ mint?: string; owner?: string; uiTokenAmount?: { uiAmount?: number | null } }> | undefined,
+  ) =>
+    (rows || [])
+      .filter((b) => b.mint === ORBITX_MINT && b.owner === owner)
+      .reduce((s, b) => s + Number(b.uiTokenAmount?.uiAmount || 0), 0);
+  return sum(parsed.meta?.postTokenBalances) - sum(parsed.meta?.preTokenBalances);
+}
+
+function solDeltaForWallet(
+  parsed: {
+    transaction?: { message?: { accountKeys?: Array<{ pubkey?: PublicKey | string } | string> } };
+    meta?: { preBalances?: number[]; postBalances?: number[] };
+  },
+  owner: string,
+): number {
+  const keys = parsed.transaction?.message?.accountKeys || [];
+  const idx = keys.findIndex((k) => {
+    const pk = typeof k === "string" ? k : typeof k?.pubkey === "string" ? k.pubkey : k?.pubkey?.toBase58?.();
+    return pk === owner;
+  });
+  if (idx < 0) return 0;
+  const pre = Number(parsed.meta?.preBalances?.[idx] || 0);
+  const post = Number(parsed.meta?.postBalances?.[idx] || 0);
+  return (post - pre) / LAMPORTS_PER_SOL;
+}
+
+export async function fetchServiceRawTxs(limit = 48): Promise<RawServiceTx[]> {
+  const conn = connection();
+  const owner = servicePublicAddress();
+  const sigs = await conn.getSignaturesForAddress(new PublicKey(owner), { limit: Math.min(80, Math.max(8, limit)) });
+  const out: RawServiceTx[] = [];
+  const chunk = 8;
+  for (let i = 0; i < sigs.length; i += chunk) {
+    const part = sigs.slice(i, i + chunk);
+    const txs = await Promise.all(
+      part.map((s) =>
+        conn.getParsedTransaction(s.signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null),
+      ),
+    );
+    for (let j = 0; j < part.length; j++) {
+      const info = part[j];
+      const parsed = txs[j];
+      const blockTime = info.blockTime ? new Date(info.blockTime * 1000).toISOString() : null;
+      if (!parsed) {
+        out.push({ signature: info.signature, slot: info.slot, blockTime, memo: null, orbitxDelta: 0, solDelta: 0 });
+        continue;
+      }
+      out.push({
+        signature: info.signature,
+        slot: parsed.slot ?? info.slot,
+        blockTime: parsed.blockTime ? new Date(parsed.blockTime * 1000).toISOString() : blockTime,
+        memo: memoFromParsed(parsed),
+        orbitxDelta: orbitxDeltaForWallet(parsed, owner),
+        solDelta: solDeltaForWallet(parsed, owner),
+      });
+    }
+  }
+  return out;
+}
+
 export { SystemProgram };

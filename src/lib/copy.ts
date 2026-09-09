@@ -78,7 +78,7 @@ export const GUIDES = {
   },
   onchain: {
     title: "How on-chain notes work",
-    body: "You write text. The backend signs a Solana memo, waits for confirmation, then buys about $0.02 of $ORBITX and burns it. The public feed only shows confirmed transactions with Solscan links.",
+    body: "You write text. The service wallet records it as a Solana memo. After confirmation it buys about $0.02 of $ORBITX and burns it. The feed is read from that wallet's confirmed transactions — not a database.",
   },
 } as const;
 
