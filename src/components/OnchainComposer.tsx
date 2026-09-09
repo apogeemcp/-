@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { NOTE_MAX_CHARS, SERVICE_WALLET_PUBLIC } from "@/lib/onchain-config";
+import { readResponseJson } from "@/lib/read-json";
 import { useWallet } from "./WalletProvider";
 import { RawOnchainMemo, SolscanMemoLinks } from "./SolscanMemoLinks";
 
@@ -57,20 +58,24 @@ export function OnchainComposer() {
   const remaining = NOTE_MAX_CHARS - text.length;
 
   async function refresh() {
-    const [w, h] = await Promise.all([
-      fetch("/api/onchain/wallet").then((r) => r.json()),
-      fetch("/api/onchain/notes?limit=20").then((r) => r.json()),
-    ]);
-    setInfo((prev) => {
-      if (!w?.ok) return prev;
-      if (prev && Number(w.sol || 0) === 0 && prev.sol > 0) return { ...w, sol: prev.sol };
-      return w;
-    });
-    setHistory((prev) => {
-      const rows = Array.isArray(h.items) ? (h.items as Note[]) : [];
-      if (rows.length === 0 && prev.length > 0) return prev;
-      return rows;
-    });
+    try {
+      const [w, h] = await Promise.all([
+        fetch("/api/onchain/wallet").then((r) => readResponseJson<WalletInfo & { ok?: boolean }>(r)),
+        fetch("/api/onchain/notes?limit=20").then((r) => readResponseJson<{ items?: Note[] }>(r)),
+      ]);
+      setInfo((prev) => {
+        if (!w?.ok) return prev;
+        if (prev && Number(w.sol || 0) === 0 && prev.sol > 0) return { ...w, sol: prev.sol };
+        return w;
+      });
+      setHistory((prev) => {
+        const rows = Array.isArray(h.items) ? (h.items as Note[]) : [];
+        if (rows.length === 0 && prev.length > 0) return prev;
+        return rows;
+      });
+    } catch {
+      /* keep last-good composer state */
+    }
   }
 
   useEffect(() => {
@@ -82,11 +87,17 @@ export function OnchainComposer() {
   useEffect(() => {
     if (!last?.id) return;
     if (last.memoStatus === "confirmed" && last.buyStatus === "confirmed" && last.burnStatus === "confirmed") return;
+    if (last.buyStatus === "failed" || last.burnStatus === "failed") return;
     const t = setInterval(async () => {
-      const res = await fetch(`/api/onchain/notes/${encodeURIComponent(last.id)}?resume=1`);
-      const json = await res.json();
-      if (json.note) setLast(json.note);
-    }, 5000);
+      try {
+        const resume = last.buyStatus === "idle" || last.burnStatus === "idle" ? "?resume=1" : "";
+        const res = await fetch(`/api/onchain/notes/${encodeURIComponent(last.id)}${resume}`);
+        const json = await readResponseJson<{ note?: Note }>(res);
+        if (json.note) setLast(json.note);
+      } catch {
+        /* keep the receipt we already have */
+      }
+    }, 8000);
     return () => clearInterval(t);
   }, [last?.id, last?.memoStatus, last?.buyStatus, last?.burnStatus]);
 
@@ -106,8 +117,9 @@ export function OnchainComposer() {
           wallet: verified ? address : undefined,
         }),
       });
-      const json = await res.json();
+      const json = await readResponseJson<{ error?: string; note?: Note }>(res);
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      if (!json.note) throw new Error("Memo was sent but the receipt was empty. Refresh the feed.");
       setLast(json.note);
       setText("");
       await refresh();

@@ -161,6 +161,13 @@ function fromMemoTx(memo: {
   };
 }
 
+async function peekIndexedNotes(): Promise<PublicNote[]> {
+  if (scanCache?.data?.notes.length) return scanCache.data.notes;
+  const sql = await loadSql();
+  const fromSql = await sql.loadAssembledFromSql(24).catch(() => null);
+  return fromSql?.notes ?? [];
+}
+
 export async function writeOnchainNote(input: WriteNoteInput) {
   const cleaned = sanitizeNote(input.note);
   if (!cleaned.ok) return { ok: false as const, status: 400, error: cleaned.error };
@@ -179,13 +186,13 @@ export async function writeOnchainNote(input: WriteNoteInput) {
     return { ok: false as const, status: 429, error: "Note rate limit reached. Try again later." };
   }
 
-  const existing = await loadAssembled().catch(() => null);
-  const recent = existing?.notes.find(
+  const indexed = await peekIndexedNotes().catch(() => [] as PublicNote[]);
+  const recent = indexed.find(
     (n) => n.note === cleaned.note && Date.now() - new Date(n.createdAt).getTime() < 15 * 60_000,
   );
   if (recent) {
     if (recent.memoStatus === "confirmed" && flags.autoBurnEnabled && recent.burnStatus !== "confirmed") {
-      void resumeNote(recent.id);
+      void resumeNote(recent.id, recent);
     }
     return { ok: true as const, status: 200, idempotent: true, note: recent };
   }
@@ -193,17 +200,11 @@ export async function writeOnchainNote(input: WriteNoteInput) {
   try {
     const { sendMemo } = await loadChain();
     const memo = await sendMemo(buildMemoText(cleaned.note));
-    invalidateChainScan();
     let note = fromMemoTx(memo, cleaned.note);
     await persistNoteSafe(note);
-    if (scanCache?.data) {
-      scanCache = { at: Date.now(), data: mergeAssembled(scanCache.data, { notes: [note], activity: [], stats: scanCache.data.stats }) };
-    }
     if (flags.autoBurnEnabled) {
-      const resumed = await resumeNote(note.id, note);
-      if (resumed) note = resumed;
+      void resumeNote(note.id, note);
     }
-    await persistNoteSafe(note);
     return { ok: true as const, status: 201, idempotent: false, note };
   } catch {
     return { ok: false as const, status: 502, error: "Memo was not confirmed on Solana." };
@@ -212,18 +213,23 @@ export async function writeOnchainNote(input: WriteNoteInput) {
 
 export async function resumeNote(id: string, seed?: PublicNote | null): Promise<PublicNote | null> {
   const flags = await effectiveFlags();
-  invalidateChainScan();
-  let assembled: Assembled = { notes: [], activity: [], stats: { totalBurnedUsd: 0, orbitxBurned: 0, totalMemos: 0, totalBuys: 0, solSpent: 0, solSpentNative: 0 } };
-  try {
-    assembled = await loadAssembled();
-  } catch {
-    /* buy/burn can still run from the seed memo */
-  }
   const sql = await loadSql();
-  const fromSql = seed?.memoTx
-    ? seed
-    : await sql.loadNoteByMemoTx(id).catch(() => null);
+  const fromSql = seed?.memoTx ? seed : await sql.loadNoteByMemoTx(id).catch(() => null);
+  let assembled: Assembled =
+    scanCache?.data ?? {
+      notes: [],
+      activity: [],
+      stats: { totalBurnedUsd: 0, orbitxBurned: 0, totalMemos: 0, totalBuys: 0, solSpent: 0, solSpentNative: 0 },
+    };
   let note = seed || fromSql || assembled.notes.find((n) => n.id === id || n.memoTx === id) || null;
+  if (!note) {
+    try {
+      assembled = await loadAssembled();
+    } catch {
+      /* buy/burn can still run from the seed memo */
+    }
+    note = assembled.notes.find((n) => n.id === id || n.memoTx === id) || null;
+  }
   if (!note || note.memoStatus !== "confirmed") return note;
   if (!flags.autoBurnEnabled) return note;
 
@@ -362,7 +368,7 @@ export async function publicFeed(input: { type?: string; limit?: number; offset?
     solSpentNative: 0,
   };
   try {
-    const assembled = await loadAssembled(Math.min(80, offset + limit + 8));
+    const assembled = await loadAssembled(Math.min(24, offset + limit + 8));
     const items =
       eventType === "ALL"
         ? assembled.activity
@@ -413,7 +419,7 @@ export async function notesIndex(input: { wallet?: string; search?: string; limi
   const limit = Math.min(50, Math.max(1, Number(input.limit || 20)));
   const offset = Math.max(0, Number(input.offset || 0));
   try {
-    const assembled = await loadAssembled(Math.min(80, offset + limit + 8));
+    const assembled = await loadAssembled(Math.min(24, offset + limit + 8));
     let items = assembled.notes;
     if (input.wallet) items = items.filter((n) => n.wallet === input.wallet);
     if (input.search) {

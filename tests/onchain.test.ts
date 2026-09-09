@@ -23,6 +23,7 @@ import { asRowArray } from "../src/lib/supabase-admin";
 import { assembleFromChain, mergeAssembled, preferAssembledScan } from "../src/lib/onchain-chain-index";
 import { postgresUrlFromEnv } from "../src/lib/pg-pool";
 import { activityFromSqlRow, publicNoteFromSqlRow } from "../src/lib/onchain-sql";
+import { plainTextError, readResponseJson } from "../src/lib/read-json";
 
 describe("on-chain notes", () => {
   it("validates and prefixes memos", () => {
@@ -227,5 +228,14 @@ describe("on-chain notes", () => {
     expect(merged.notes[0].buyTx).toBe("buysig");
     expect(merged.notes[0].burnTx).toBe("burnsig");
     expect(merged.stats.totalMemos).toBe(1);
+  });
+
+  it("turns Vercel timeout text into a usable error instead of a JSON parse crash", async () => {
+    expect(plainTextError("An error occurred with your application.", 500)).toMatch(/timed out/i);
+    const res = new Response("An error occurred with your application.", {
+      status: 504,
+      headers: { "content-type": "text/plain" },
+    });
+    await expect(readResponseJson(res)).rejects.toThrow(/timed out/i);
   });
 });
