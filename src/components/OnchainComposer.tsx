@@ -161,8 +161,9 @@ export function OnchainComposer() {
           <p>Notes recorded · {info?.stats?.totalMemos ?? 0}</p>
         </div>
         <p className="mt-3 text-[12px] text-ivory/55">
-          Each qualifying note buys and burns ${info?.noteBurnUsd ?? 0.03} of $ORBITX. The service wallet keeps a ${ORBITX_RESERVE_USD.toFixed(2)}
-          $ORBITX float so the token account stays open and later buys stay under a cent of fees.
+          Each qualifying note buys and burns ${info?.noteBurnUsd ?? 0.03} of $ORBITX. The service wallet keeps a $
+          {ORBITX_RESERVE_USD.toFixed(2)} $ORBITX float so the token account stays open and later buys stay under a cent of
+          fees.
           {info && !info.notesEnabled ? " Notes are currently paused." : ""}
           {info && !info.autoBurnEnabled ? " Auto-burn is paused." : ""}
           {info && !info.ready ? " Service wallet key is not configured on this host — memos will not sign." : ""}
