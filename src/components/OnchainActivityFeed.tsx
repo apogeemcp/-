@@ -81,9 +81,14 @@ export function OnchainActivityFeed({ compact = false }: { compact?: boolean }) 
         const res = await fetch(`/api/onchain/activity?type=${tab}&limit=24&offset=${nextOffset}`);
         const json = await res.json();
         const rows = (json.items || []) as Activity[];
-        setStats(json.stats || null);
+        setStats((prev) => {
+          const incoming = json.stats || null;
+          if ((!incoming || Number(incoming.totalMemos || 0) === 0) && Number(prev?.totalMemos || 0) > 0) return prev;
+          return incoming;
+        });
         setOffset(nextOffset);
         setItems((prev) => {
+          if (nextOffset === 0 && rows.length === 0 && prev.length > 0) return prev;
           const merged = nextOffset === 0 ? rows : [...prev, ...rows.filter((r) => !prev.some((p) => p.id === r.id))];
           if (nextOffset === 0) {
             const neu = new Set<string>();

@@ -20,7 +20,7 @@ import {
 import { toolSafety } from "../src/lib/docs";
 import { TOOLS } from "../src/lib/tools";
 import { asRowArray } from "../src/lib/supabase-admin";
-import { assembleFromChain } from "../src/lib/onchain-chain-index";
+import { assembleFromChain, preferAssembledScan } from "../src/lib/onchain-chain-index";
 
 describe("on-chain notes", () => {
   it("validates and prefixes memos", () => {
@@ -139,5 +139,19 @@ describe("on-chain notes", () => {
     ]);
     expect(out.notes).toHaveLength(1);
     expect(out.notes[0].note).toBe(note);
+  });
+
+  it("keeps the last good chain scan when RPC returns nothing", () => {
+    const good = assembleFromChain([
+      { signature: "memosig", slot: 1, blockTime: "2026-09-09T10:09:14.000Z", memo: "ORBITX_NOTE:v1:keep me", orbitxDelta: 0, solDelta: 0 },
+    ]);
+    const empty = assembleFromChain([]);
+    expect(preferAssembledScan(good, empty, { requested: 8, fetched: 0 })).toBe(good);
+    expect(preferAssembledScan(good, empty, { requested: 8, fetched: 2 }).notes).toHaveLength(1);
+    expect(preferAssembledScan(null, empty, { requested: 0, fetched: 0 }).notes).toHaveLength(0);
+    const newer = assembleFromChain([
+      { signature: "newsig", slot: 2, blockTime: "2026-09-09T10:10:00.000Z", memo: "ORBITX_NOTE:v1:fresh", orbitxDelta: 0, solDelta: 0 },
+    ]);
+    expect(preferAssembledScan(good, newer, { requested: 2, fetched: 2 }).notes[0].note).toBe("fresh");
   });
 });

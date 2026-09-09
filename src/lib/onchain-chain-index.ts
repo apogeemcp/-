@@ -217,3 +217,15 @@ export function spendLast24h(activity: ChainActivity[], notes: PublicNote[]) {
     sol: recentNotes.reduce((s, n) => s + Number(n.solSpent || 0), 0),
   };
 }
+
+/** Keep a prior complete chain scan when RPC returns a partial or empty fetch. */
+export function preferAssembledScan<T extends { notes: unknown[] }>(
+  previous: T | null,
+  next: T,
+  scan: { requested: number; fetched: number },
+): T {
+  if (!previous) return next;
+  if (scan.requested > 0 && scan.fetched === 0) return previous;
+  if (scan.fetched < scan.requested && next.notes.length < previous.notes.length) return previous;
+  return next;
+}

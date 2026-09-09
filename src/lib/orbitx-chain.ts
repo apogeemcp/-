@@ -321,19 +321,27 @@ function solDeltaForWallet(parsed: ParsedTransactionWithMeta, owner: string): nu
   return (post - pre) / LAMPORTS_PER_SOL;
 }
 
-export async function fetchServiceRawTxs(limit = 48): Promise<RawServiceTx[]> {
+async function getParsedTx(conn: Connection, signature: string): Promise<ParsedTransactionWithMeta | null> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const parsed = await conn
+      .getParsedTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 })
+      .catch(() => null);
+    if (parsed) return parsed;
+    if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 120 * (attempt + 1)));
+  }
+  return null;
+}
+
+export async function fetchServiceRawTxs(limit = 48): Promise<{ txs: RawServiceTx[]; requested: number; fetched: number }> {
   const conn = connection();
   const owner = servicePublicAddress();
   const sigs = await conn.getSignaturesForAddress(new PublicKey(owner), { limit: Math.min(80, Math.max(8, limit)) });
   const out: RawServiceTx[] = [];
-  const chunk = 8;
+  let fetched = 0;
+  const chunk = 4;
   for (let i = 0; i < sigs.length; i += chunk) {
     const part = sigs.slice(i, i + chunk);
-    const txs = await Promise.all(
-      part.map((s) =>
-        conn.getParsedTransaction(s.signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null),
-      ),
-    );
+    const txs = await Promise.all(part.map((s) => getParsedTx(conn, s.signature)));
     for (let j = 0; j < part.length; j++) {
       const info = part[j];
       const parsed = txs[j];
@@ -342,6 +350,7 @@ export async function fetchServiceRawTxs(limit = 48): Promise<RawServiceTx[]> {
         out.push({ signature: info.signature, slot: info.slot, blockTime, memo: null, orbitxDelta: 0, solDelta: 0 });
         continue;
       }
+      fetched += 1;
       out.push({
         signature: info.signature,
         slot: parsed.slot ?? info.slot,
@@ -352,7 +361,7 @@ export async function fetchServiceRawTxs(limit = 48): Promise<RawServiceTx[]> {
       });
     }
   }
-  return out;
+  return { txs: out, requested: sigs.length, fetched };
 }
 
 export { SystemProgram };

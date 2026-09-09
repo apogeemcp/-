@@ -56,8 +56,16 @@ export function OnchainComposer() {
       fetch("/api/onchain/wallet").then((r) => r.json()),
       fetch("/api/onchain/notes?limit=20").then((r) => r.json()),
     ]);
-    setInfo(w);
-    setHistory(h.items || []);
+    setInfo((prev) => {
+      if (!w?.ok) return prev;
+      if (prev && Number(w.sol || 0) === 0 && prev.sol > 0) return { ...w, sol: prev.sol };
+      return w;
+    });
+    setHistory((prev) => {
+      const rows = Array.isArray(h.items) ? (h.items as Note[]) : [];
+      if (rows.length === 0 && prev.length > 0) return prev;
+      return rows;
+    });
   }
 
   useEffect(() => {
