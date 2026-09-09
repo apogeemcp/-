@@ -400,6 +400,68 @@ export const TOOLS: ToolDef[] = [
     description: "Canonical live MCP URL https://apogeemcp.digital/api/mcp and one-click install targets.",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "write_onchain_note",
+    description:
+      "Write a permanent Solana memo (ORBITX_NOTE:v1) via the Apogee service wallet, then queue ~$0.02 of $ORBITX buy-and-burn. Public and irreversible. Rate limited. Returns signature + Solscan URL. Never send secrets.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        note: { type: "string", description: "UTF-8 note, max 240 characters. Permanent and public." },
+        idempotencyKey: { type: "string", description: "Repeat the same key to avoid a second memo/burn." },
+        wallet: { type: "string", description: "Optional attribution address." },
+      },
+      required: ["note"],
+    },
+  },
+  {
+    name: "get_onchain_note",
+    description: "Fetch a verified on-chain note by Solana transaction signature.",
+    inputSchema: {
+      type: "object",
+      properties: { signature: { type: "string", description: "Solana transaction signature" } },
+      required: ["signature"],
+    },
+  },
+  {
+    name: "list_onchain_notes",
+    description: "List indexed on-chain notes with optional wallet, search, and pagination.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        wallet: { type: "string" },
+        search: { type: "string" },
+        limit: { type: "number" },
+        offset: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "get_onchain_activity",
+    description: "Public on-chain activity feed: memos, $ORBITX buys, and burns with Solscan links.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        eventType: { type: "string", enum: ["ALL", "MEMOS", "BUYS", "BURNS", "MEMO_CREATED", "ORBITX_PURCHASE", "ORBITX_BURN"] },
+        limit: { type: "number" },
+        offset: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "get_service_wallet_status",
+    description: "Public service wallet address, SOL/$ORBITX balances, memo/buy/burn totals. Never returns private keys.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "burn_orbitx",
+    description: "Admin-only: burn $ORBITX held by the service wallet. Requires adminSecret. Not a generic transaction signer.",
+    inputSchema: {
+      type: "object",
+      properties: { adminSecret: { type: "string" }, amount: { type: "number" } },
+      required: ["adminSecret"],
+    },
+  },
 ];
 
 export const MCP_INSTRUCTIONS = `You are connected to Apogee, the Robinhood Chain intel MCP (Search / Chart / Desk / Launch / Track).
@@ -412,6 +474,7 @@ Rules:
 - Never ask for a seed phrase or private key.
 - Wallet tracking (track_wallet, get_wallet_pnl, get_wallet_txs) is read-only.
 - prepare_pons_launch returns an unsigned tx for the user to sign in Phantom (ethereum provider) after wallet_addEthereumChain for 4663. Do not claim a launch or swap executed unless the user reports a tx hash.
+- On-chain notes: write_onchain_note records a public Solana memo via the Apogee service wallet and queues ~$0.02 of $ORBITX buy-and-burn. Notes are permanent. Never put secrets or personal data in a memo. Repeat idempotencyKey to avoid duplicates. burn_orbitx is admin-only.
 - Stock Tokens may not be offered to US/Canada/UK/Switzerland persons.
 - Prefer scan_token before size, get_desk for a market snapshot, list_launches / list_pons_launches for new tokens, track_wallet for an address.
 pons (write the name in lowercase; link https://www.ponsfamily.com/launchpad):

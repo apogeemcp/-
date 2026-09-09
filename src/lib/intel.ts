@@ -22,6 +22,14 @@ import {
   trackWallet,
 } from "./track";
 import { getCurveQuote, getMcpInfo, preparePonsBuy, preparePonsLaunch, previewPonsLaunch } from "./launch";
+import {
+  burnOrbitxTool,
+  getOnchainActivityTool,
+  getOnchainNoteTool,
+  getServiceWalletStatusTool,
+  listOnchainNotesTool,
+  writeOnchainNoteTool,
+} from "./onchain-tools";
 import { CATALOG_SIZE } from "./catalog";
 import { mcpHttpUrl } from "./site";
 import { mediaUrl } from "./media";
@@ -731,6 +739,12 @@ export const toolImpl = {
   get_curve_quote: (args: Record<string, unknown>) => getCurveQuote(String(args.address || args.token || "")),
   add_robinhood_chain: async () => ({ ok: true, method: "wallet_addEthereumChain", params: [addRobinhoodChainParams] }),
   get_mcp_info: () => getMcpInfo(),
+  write_onchain_note: (args: Record<string, unknown>) => writeOnchainNoteTool(args),
+  get_onchain_note: (args: Record<string, unknown>) => getOnchainNoteTool(args),
+  list_onchain_notes: (args: Record<string, unknown>) => listOnchainNotesTool(args),
+  get_onchain_activity: (args: Record<string, unknown>) => getOnchainActivityTool(args),
+  get_service_wallet_status: () => getServiceWalletStatusTool(),
+  burn_orbitx: (args: Record<string, unknown>) => burnOrbitxTool(args),
   apogee_status: async () => {
     const stats = await getChainStats();
     return {

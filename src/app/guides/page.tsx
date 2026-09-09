@@ -10,6 +10,7 @@ const LINKS: Record<keyof typeof GUIDES, string> = {
   mcp: "/connect",
   profile: "/wallet",
   token: "/dashboard",
+  onchain: "/onchain-notes",
 };
 
 export default function GuidesPage() {

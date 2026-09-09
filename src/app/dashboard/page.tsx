@@ -3,6 +3,7 @@ import { DeskLive } from "@/components/DeskLive";
 import { PageFrame, PageHero } from "@/components/PageHero";
 import { ScanBox } from "@/components/ScanBox";
 import { GuidePanel } from "@/components/InfoBits";
+import { OnchainActivityFeed } from "@/components/OnchainActivityFeed";
 import { GUIDES } from "@/lib/copy";
 import { CANONICAL_MCP, PRODUCT } from "@/lib/site";
 
@@ -26,6 +27,9 @@ export default function DashboardPage() {
           <ScanBox />
         </Suspense>
         <DeskLive />
+        <div className="mt-10">
+          <OnchainActivityFeed compact />
+        </div>
       </PageFrame>
     </main>
   );

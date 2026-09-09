@@ -24,7 +24,7 @@ export type DocsNavItem = { href: string; label: string; group: string };
 
 export const DOCS_NAV: DocsNavItem[] = [
   { group: "Hub", href: "/developers", label: "Overview" },
-  { group: "Hub", href: "/developers/access", label: "Access" },
+  { group: "Hub", href: "/developers/onchain", label: "On-chain notes" },
   { group: "Hub", href: "/developers/history", label: "History" },
   { group: "Hub", href: "/developers/usage", label: "Usage" },
   { group: "Hub", href: "/developers/profile", label: "Profile" },
@@ -65,6 +65,18 @@ export function toolSafety(name: string): { class: SafetyClass; note: string } {
       note: "Indicative buy helper plus the pons app URL. Does not broadcast. Following the URL or signing a later tx can move funds.",
     };
   }
+  if (name === "write_onchain_note") {
+    return {
+      class: "FINANCIAL / HIGH IMPACT",
+      note: "Broadcasts a public Solana memo from the Apogee service wallet and queues a ~$0.02 $ORBITX buy-and-burn. Permanent. Rate limited. Do not put secrets in the note.",
+    };
+  }
+  if (name === "burn_orbitx") {
+    return {
+      class: "FINANCIAL / HIGH IMPACT",
+      note: "Admin-only burn of $ORBITX held by the service wallet. Requires adminSecret. Not a generic signer.",
+    };
+  }
   if (name === "add_robinhood_chain") {
     return {
       class: "LOW RISK ACTION",
@@ -85,6 +97,7 @@ export function toolCategory(name: string): ToolCategory {
   if (/chart|pair|trending|top_pool|boosted|market_overview|desk|stock_quote|corporate|chain_stats/.test(name)) {
     return "Market";
   }
+  if (/onchain|orbitx|memo/.test(name)) return "Utility";
   if (/search|scan|get_token|get_contract|activity|list_stock/.test(name)) return "Token";
   return "Utility";
 }
@@ -468,7 +481,7 @@ export function docsSearchIndex(): SearchHit[] {
     { title: "FAQ", href: "/faq", section: "Information", text: "faq mcp pons phantom" },
     { title: "About", href: "/about", section: "Information", text: "what is Apogee Robinhood Chain" },
     { title: "Guides", href: "/guides", section: "Information", text: "desk launch orbit profile" },
-    { title: "MCP access", href: "/developers/access", section: "Hub", text: "auth none $ORBITX rental lifetime buy burn 25 percent list prices" },
+    { title: "On-chain notes", href: "/onchain-notes", section: "Hub", text: "Solana memo $ORBITX buy burn activity feed write_onchain_note" },
     { title: "Developer profile", href: "/developers/profile", section: "Hub", text: "wallet signature role trader developer" },
     { title: "Developer support", href: "/developers/support", section: "Hub", text: "troubleshooting MCP status security" },
     { title: "Developer terms", href: "/developer-terms", section: "Legal", text: "developer terms MCP usage rules API limitations" },

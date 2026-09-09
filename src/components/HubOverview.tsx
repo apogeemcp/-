@@ -88,6 +88,9 @@ export function HubOverview() {
         <Link href="/developers/access" className="btn-primary">
           MCP access shop
         </Link>
+        <Link href="/onchain-notes" className="btn-ghost">
+          On-chain notes
+        </Link>
         <Link href="/developers/mcp" className="btn-ghost">
           MCP docs
         </Link>

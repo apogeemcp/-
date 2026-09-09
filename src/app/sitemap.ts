@@ -7,6 +7,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const extra = developerSlugs().map((s) => `/developers/${s}`);
   const paths = [
     "",
+    "/onchain-notes",
     "/dashboard",
     "/launches",
     "/docs",
@@ -24,6 +25,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/developers",
     "/developers/tools",
     "/developers/status",
+    "/developers/onchain",
     "/developers/access",
     "/developers/partners",
     "/developers/usage",

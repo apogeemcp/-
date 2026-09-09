@@ -26,6 +26,8 @@ describe("developer portal", () => {
     expect(toolSafety("add_robinhood_chain").class).toBe("LOW RISK ACTION");
     expect(toolSafety("scan_token").class).toBe("READ ONLY");
     expect(toolSafety("get_swap_quote").class).toBe("READ ONLY");
+    expect(toolSafety("write_onchain_note").class).toBe("FINANCIAL / HIGH IMPACT");
+    expect(toolSafety("burn_orbitx").class).toBe("FINANCIAL / HIGH IMPACT");
   });
 
   it("documents only Robinhood Chain 4663", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { OnchainAdmin } from "./OnchainAdmin";
 
 type Hub = Record<string, unknown> & { ok?: boolean; error?: string };
 
@@ -183,6 +184,7 @@ export function AdminHub() {
               {!usage?.rows?.length ? <li className="text-ivory/60">{usage?.ok === false ? "Usage not readable." : "No usage yet."}</li> : null}
             </ul>
           </section>
+          <OnchainAdmin secret={secret} />
         </>
       ) : (
         <p className="text-sm text-ivory/70">
