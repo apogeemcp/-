@@ -10,6 +10,7 @@ import {
 import { buildMemoText, parseMemoText, sanitizeNote, isIdempotencyKey, previewNote } from "../src/lib/onchain-memo";
 import { toolSafety } from "../src/lib/docs";
 import { TOOLS } from "../src/lib/tools";
+import { asRowArray } from "../src/lib/supabase-admin";
 
 describe("on-chain notes", () => {
   it("validates and prefixes memos", () => {
@@ -79,5 +80,12 @@ describe("on-chain notes", () => {
     const feed = await publicFeed({ type: "ALL", limit: 5 });
     expect(feed.ok).toBe(true);
     expect(Array.isArray(feed.items)).toBe(true);
+  });
+
+  it("does not treat API error objects as row lists", () => {
+    expect(asRowArray(null)).toEqual([]);
+    expect(asRowArray(undefined)).toEqual([]);
+    expect(asRowArray({ hint: "Use a JWT", message: "Invalid API key" })).toEqual([]);
+    expect(asRowArray([{ usd_value: 0.02, sol_spent: 0.0001 }])).toEqual([{ usd_value: 0.02, sol_spent: 0.0001 }]);
   });
 });

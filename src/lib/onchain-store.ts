@@ -1,4 +1,4 @@
-import { sbInsert, sbRest, supabaseAdmin } from "./supabase-admin";
+import { asRowArray, sbInsert, sbRest, supabaseAdmin } from "./supabase-admin";
 import {
   type ActivityStatus,
   type OnchainEventType,
@@ -76,7 +76,7 @@ export async function loadSettings(): Promise<SettingsRow> {
   };
   if (!supabaseAdmin()) return fallback;
   const res = await sbRest<SettingsRow[]>("apogee_onchain_settings?id=eq.1&select=*");
-  const row = res.data?.[0];
+  const row = asRowArray<SettingsRow>(res.data)[0];
   if (!row) return fallback;
   return {
     notes_enabled: row.notes_enabled,
@@ -110,17 +110,17 @@ export async function patchSettings(patch: Partial<SettingsRow>) {
 
 export async function findNoteByIdempotency(key: string): Promise<NoteRow | null> {
   const res = await sbRest<NoteRow[]>(`apogee_onchain_notes?idempotency_key=eq.${encodeURIComponent(key)}&select=*`);
-  return res.data?.[0] || null;
+  return asRowArray<NoteRow>(res.data)[0] || null;
 }
 
 export async function findNoteById(id: string): Promise<NoteRow | null> {
   const res = await sbRest<NoteRow[]>(`apogee_onchain_notes?id=eq.${encodeURIComponent(id)}&select=*`);
-  return res.data?.[0] || null;
+  return asRowArray<NoteRow>(res.data)[0] || null;
 }
 
 export async function findNoteByMemoTx(signature: string): Promise<NoteRow | null> {
   const res = await sbRest<NoteRow[]>(`apogee_onchain_notes?memo_tx=eq.${encodeURIComponent(signature)}&select=*`);
-  return res.data?.[0] || null;
+  return asRowArray<NoteRow>(res.data)[0] || null;
 }
 
 export async function insertNote(row: Partial<NoteRow> & { idempotency_key: string; note: string; memo_text: string }) {
@@ -203,7 +203,7 @@ export async function dailySpend() {
   const buys = await sbRest<Array<{ usd_value?: number; sol_spent?: number }>>(
     `apogee_onchain_notes?buy_status=eq.confirmed&buy_confirmed_at=gte.${since}&select=usd_value,sol_spent`,
   );
-  const rows = buys.data || [];
+  const rows = asRowArray<{ usd_value?: number; sol_spent?: number }>(buys.data);
   return {
     burnUsd: rows.reduce((s, r) => s + Number(r.usd_value || 0), 0),
     sol: rows.reduce((s, r) => s + Number(r.sol_spent || 0), 0),
@@ -214,7 +214,7 @@ export async function pendingRecoveries(limit = 8) {
   const res = await sbRest<NoteRow[]>(
     `apogee_onchain_notes?memo_status=eq.confirmed&or=(buy_status.eq.idle,buy_status.eq.pending,buy_status.eq.failed,burn_status.eq.idle,burn_status.eq.pending,burn_status.eq.failed)&order=created_at.asc&limit=${limit}&select=*`,
   );
-  return res.data || [];
+  return asRowArray<NoteRow>(res.data);
 }
 
 export function notePublic(note: NoteRow) {
