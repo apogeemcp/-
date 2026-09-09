@@ -18,7 +18,7 @@ import {
   pendingRecoveries,
   type NoteRow,
 } from "./onchain-store";
-import { supabaseAdmin } from "./supabase-admin";
+import { adminKeyIssue, storeWriteError, supabaseAdmin } from "./supabase-admin";
 
 function servicePublicAddress() {
   return SERVICE_WALLET_PUBLIC;
@@ -74,7 +74,7 @@ export async function writeOnchainNote(input: WriteNoteInput) {
   const cleaned = sanitizeNote(input.note);
   if (!cleaned.ok) return { ok: false as const, status: 400, error: cleaned.error };
   if (!supabaseAdmin()) {
-    return { ok: false as const, status: 503, error: "Notes cannot be stored (missing service role)." };
+    return { ok: false as const, status: 503, error: adminKeyIssue() || "Notes cannot be stored (missing service role)." };
   }
   const { serviceWalletReady } = await loadSigner();
   if (!serviceWalletReady()) {
@@ -113,15 +113,8 @@ export async function writeOnchainNote(input: WriteNoteInput) {
   if (!inserted.ok || !note) {
     const again = await findNoteByIdempotency(key);
     if (again) return { ok: true as const, status: 200, idempotent: true, note: notePublic(again) };
-    const authFailed =
-      inserted.status === 401 ||
-      inserted.status === 403 ||
-      /invalid api key|jwt|service role/i.test(inserted.error || "");
-    return {
-      ok: false as const,
-      status: authFailed ? 503 : 502,
-      error: authFailed ? "Notes cannot be stored (service role rejected)." : "Could not create the note record.",
-    };
+    const failed = storeWriteError(inserted);
+    return { ok: false as const, status: failed.status, error: failed.error };
   }
 
   try {
@@ -309,6 +302,7 @@ export async function walletStatus() {
     maxDailySolSpend: flags.maxDailySolSpend,
     spentTodayUsd: spend.burnUsd,
     spentTodaySol: spend.sol,
+    dbReady: Boolean(supabaseAdmin()),
     marketPriceUsd: null as number | null,
     estimatedSolForNote: null as number | null,
     stats,
