@@ -31,6 +31,10 @@ export function buildMemoText(note: string): string {
   return `${MEMO_PREFIX}${note}`;
 }
 
+export function memoUtf8Hex(memo: string): string {
+  return Buffer.from(memo, "utf8").toString("hex");
+}
+
 export function parseMemoText(memo: string): { ok: true; note: string } | { ok: false; error: string } {
   const value = stripWrapQuotes(String(memo || "").trim());
   if (!value.startsWith(MEMO_PREFIX)) {

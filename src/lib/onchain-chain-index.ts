@@ -47,6 +47,7 @@ export type ChainActivity = {
   transaction_signature: string | null;
   related_transaction_signature: string | null;
   solscan_url: string | null;
+  memo: string | null;
   created_at: string;
   confirmed_at: string | null;
   slot: number | null;
@@ -108,6 +109,7 @@ function activity(
     transaction_signature: tx.signature,
     related_transaction_signature: extra.related_transaction_signature ?? null,
     solscan_url: scanUrl(tx.signature),
+    memo: extra.memo ?? (type === "MEMO_CREATED" ? tx.memo : null),
     created_at: at,
     confirmed_at: at,
     slot: tx.slot,
@@ -216,4 +218,16 @@ export function spendLast24h(activity: ChainActivity[], notes: PublicNote[]) {
     burnUsd: burns.length * NOTE_BURN_USD,
     sol: recentNotes.reduce((s, n) => s + Number(n.solSpent || 0), 0),
   };
+}
+
+/** Keep a prior complete chain scan when RPC returns a partial or empty fetch. */
+export function preferAssembledScan<T extends { notes: unknown[] }>(
+  previous: T | null,
+  next: T,
+  scan: { requested: number; fetched: number },
+): T {
+  if (!previous) return next;
+  if (scan.requested > 0 && scan.fetched === 0) return previous;
+  if (scan.fetched < scan.requested && next.notes.length < previous.notes.length) return previous;
+  return next;
 }

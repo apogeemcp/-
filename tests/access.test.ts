@@ -13,7 +13,7 @@ import {
 } from "../src/lib/access";
 import { lookupPlanOrThrow } from "../src/lib/checkout";
 import { buildSiweMessage } from "../src/lib/session";
-import { parseSolscanInput, SOLANA_TREASURY, solscanTxUrl } from "../src/lib/solana-pay";
+import { parseSolscanInput, SOLANA_TREASURY, solscanMemoViews, solscanTxUrl } from "../src/lib/solana-pay";
 
 describe("MCP access catalog", () => {
   it("publishes the five official USD plans", () => {
@@ -70,6 +70,12 @@ describe("Solscan confirmation", () => {
     expect(parseSolscanInput(`https://solscan.io/tx/${sig}?cluster=mainnet`)).toEqual({ ok: true, signature: sig });
     expect(parseSolscanInput(sig)).toEqual({ ok: true, signature: sig });
     expect(solscanTxUrl(sig)).toBe(`https://solscan.io/tx/${sig}`);
+    const views = solscanMemoViews(sig, "Wallet111");
+    expect(views.instructions).toBe(`https://solscan.io/tx/${sig}?tab=instructions`);
+    expect(views.logs).toBe(`https://solscan.io/tx/${sig}?tab=programLogs`);
+    expect(views.raw).toBe(`https://solscan.io/tx/${sig}?tab=raw`);
+    expect(views.account).toBe("https://solscan.io/account/Wallet111#transactions");
+    expect(parseSolscanInput(views.raw)).toEqual({ ok: true, signature: sig });
   });
 
   it("rejects non-solscan URLs and junk", () => {

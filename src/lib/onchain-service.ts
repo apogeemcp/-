@@ -4,6 +4,7 @@ import { buildMemoText, parseMemoText, sanitizeNote } from "./onchain-memo";
 import { effectiveFlags } from "./onchain-store";
 import {
   assembleFromChain,
+  preferAssembledScan,
   spendLast24h,
   type ChainActivity,
   type ChainStats,
@@ -40,10 +41,15 @@ export function invalidateChainScan() {
 async function loadAssembled(limit = 48): Promise<Assembled> {
   if (scanCache && Date.now() - scanCache.at < 12_000) return scanCache.data;
   const { fetchServiceRawTxs } = await loadChain();
-  const txs = await fetchServiceRawTxs(limit);
-  const data = assembleFromChain(txs);
-  scanCache = { at: Date.now(), data };
-  return data;
+  try {
+    const { txs, requested, fetched } = await fetchServiceRawTxs(limit);
+    const next = preferAssembledScan(scanCache?.data ?? null, assembleFromChain(txs), { requested, fetched });
+    scanCache = { at: Date.now(), data: next };
+    return next;
+  } catch (error) {
+    if (scanCache?.data) return scanCache.data;
+    throw error;
+  }
 }
 
 function fromMemoTx(memo: {

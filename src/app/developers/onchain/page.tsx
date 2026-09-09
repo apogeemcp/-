@@ -11,14 +11,15 @@ export default function DevelopersOnchainPage() {
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ivory/80">
           Agents call <span className="font-mono text-gold">write_onchain_note</span> on the public MCP. The website
           uses the same signer. Notes live on Solana as memos; the feed is read from confirmed service-wallet
-          transactions. Clients never see a private key.
+          transactions. On Solscan, open the transaction&apos;s Instructions, Program logs, and Raw tabs — Overview
+          often omits memo text. Clients never see a private key.
         </p>
       </header>
       <div className="flex flex-wrap gap-2">
         <Link href="/onchain-notes" className="btn-primary">
           Open composer
         </Link>
-        <a className="btn-ghost" href={`https://solscan.io/account/${SERVICE_WALLET_PUBLIC}`} target="_blank" rel="noreferrer">
+        <a className="btn-ghost" href={`https://solscan.io/account/${SERVICE_WALLET_PUBLIC}#transactions`} target="_blank" rel="noreferrer">
           Service wallet on Solscan
         </a>
       </div>

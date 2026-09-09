@@ -78,7 +78,7 @@ export const GUIDES = {
   },
   onchain: {
     title: "How on-chain notes work",
-    body: "You write text. The service wallet records it as a Solana memo. After confirmation it buys about $0.02 of $ORBITX and burns it. The feed is read from that wallet's confirmed transactions — not a database.",
+    body: "You write text. The service wallet records it as a Solana memo (ORBITX_NOTE:v1:…). After confirmation it buys about $0.02 of $ORBITX and burns it. The feed is read from that wallet's confirmed transactions — not a database. On Solscan, Overview often hides memos: open Instructions, Program logs, or Raw.",
   },
 } as const;
 

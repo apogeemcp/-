@@ -23,10 +23,12 @@ export default function OnchainNotesPage() {
         <GuidePanel title={GUIDES.onchain.title} body={GUIDES.onchain.body} href="/developers/onchain" />
         <p className="mb-6 mt-4 text-sm text-ivory/70">
           Service wallet{" "}
-          <a className="font-mono text-ember" href={`https://solscan.io/account/${SERVICE_WALLET_PUBLIC}`} target="_blank" rel="noreferrer">
+          <a className="font-mono text-ember" href={`https://solscan.io/account/${SERVICE_WALLET_PUBLIC}#transactions`} target="_blank" rel="noreferrer">
             {SERVICE_WALLET_PUBLIC}
           </a>
-          . Do not put secrets or personal information in a memo — it is permanent and public.
+          . Each memo is <span className="font-mono text-ivory/90">ORBITX_NOTE:v1:</span> on Solana. On Solscan the
+          Overview tab often hides it — open Instructions (UTF-8), Program logs, or Raw. Do not put secrets or
+          personal information in a memo — it is permanent and public.
         </p>
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <OnchainComposer />
