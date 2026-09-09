@@ -70,7 +70,7 @@ export function OnchainComposer() {
     if (!last?.id) return;
     if (last.memoStatus === "confirmed" && last.buyStatus === "confirmed" && last.burnStatus === "confirmed") return;
     const t = setInterval(async () => {
-      const res = await fetch(`/api/onchain/notes/${last.id}?resume=1`);
+      const res = await fetch(`/api/onchain/notes/${encodeURIComponent(last.id)}?resume=1`);
       const json = await res.json();
       if (json.note) setLast(json.note);
     }, 5000);
@@ -149,7 +149,7 @@ export function OnchainComposer() {
           {history.map((n) => (
             <HistoryRow key={n.id} note={n} />
           ))}
-          {!history.length ? <p className="text-sm text-ivory/60">No notes indexed yet.</p> : null}
+          {!history.length ? <p className="text-sm text-ivory/60">No memos on the service wallet yet.</p> : null}
         </div>
       </section>
     </div>

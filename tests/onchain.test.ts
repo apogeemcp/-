@@ -10,7 +10,8 @@ import {
 import { buildMemoText, parseMemoText, sanitizeNote, isIdempotencyKey, previewNote } from "../src/lib/onchain-memo";
 import { toolSafety } from "../src/lib/docs";
 import { TOOLS } from "../src/lib/tools";
-import { asRowArray, inspectServiceKey, normalizeServiceKey } from "../src/lib/supabase-admin";
+import { asRowArray } from "../src/lib/supabase-admin";
+import { assembleFromChain } from "../src/lib/onchain-chain-index";
 
 describe("on-chain notes", () => {
   it("validates and prefixes memos", () => {
@@ -75,7 +76,7 @@ describe("on-chain notes", () => {
     expect(walletTool?.description).toMatch(/Never returns private keys/);
   });
 
-  it("serves the public feed without loading the Solana signer", async () => {
+  it("serves the public feed from chain scans", async () => {
     const { publicFeed } = await import("../src/lib/onchain-service");
     const feed = await publicFeed({ type: "ALL", limit: 5 });
     expect(feed.ok).toBe(true);
@@ -89,24 +90,22 @@ describe("on-chain notes", () => {
     expect(asRowArray([{ usd_value: 0.02, sol_spent: 0.0001 }])).toEqual([{ usd_value: 0.02, sol_spent: 0.0001 }]);
   });
 
-  it("accepts secret keys and rejects anon/publishable as the admin client", () => {
-    expect(normalizeServiceKey('  "sb_secret_abc"  ')).toBe("sb_secret_abc");
-    expect(inspectServiceKey("sb_secret_abc").kind).toBe("secret");
-    expect(inspectServiceKey("sb_secret_abc").issue).toBeNull();
-    expect(inspectServiceKey("sb_publishable_abc").kind).toBe("publishable");
-    expect(inspectServiceKey("sb_publishable_abc").issue).toMatch(/publishable/);
-    const anon = [
-      Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"),
-      Buffer.from(JSON.stringify({ role: "anon", ref: "paxtohwiycuhwmlziwrr" })).toString("base64url"),
-      "sig",
-    ].join(".");
-    expect(inspectServiceKey(anon).kind).toBe("anon");
-    const service = [
-      Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"),
-      Buffer.from(JSON.stringify({ role: "service_role", ref: "paxtohwiycuhwmlziwrr" })).toString("base64url"),
-      "sig",
-    ].join(".");
-    expect(inspectServiceKey(`Bearer ${service}`).kind).toBe("service_role");
-    expect(inspectServiceKey(service).issue).toBeNull();
+  it("assembles notes and the public feed from confirmed chain transactions", () => {
+    const memo = "ORBITX_NOTE:v1:hello chain";
+    const out = assembleFromChain([
+      { signature: "burnsig", slot: 3, blockTime: "2026-09-09T10:00:03.000Z", memo: null, orbitxDelta: -123.4, solDelta: 0 },
+      { signature: "buysig", slot: 2, blockTime: "2026-09-09T10:00:02.000Z", memo: null, orbitxDelta: 123.4, solDelta: -0.0002 },
+      { signature: "memosig", slot: 1, blockTime: "2026-09-09T10:00:01.000Z", memo, orbitxDelta: 0, solDelta: 0 },
+    ]);
+    expect(out.notes).toHaveLength(1);
+    expect(out.notes[0].id).toBe("memosig");
+    expect(out.notes[0].note).toBe("hello chain");
+    expect(out.notes[0].buyTx).toBe("buysig");
+    expect(out.notes[0].burnTx).toBe("burnsig");
+    expect(out.notes[0].memoStatus).toBe("confirmed");
+    expect(out.notes[0].buyStatus).toBe("confirmed");
+    expect(out.notes[0].burnStatus).toBe("confirmed");
+    expect(out.activity.map((a) => a.event_type)).toEqual(["ORBITX_BURN", "ORBITX_PURCHASE", "MEMO_CREATED"]);
+    expect(out.stats.totalMemos).toBe(1);
   });
 });

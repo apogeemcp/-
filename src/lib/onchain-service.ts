@@ -1,24 +1,14 @@
-import { randomUUID } from "crypto";
 import { consumeNamedLimit } from "./ratelimit";
 import { ORBITX_MINT, NOTE_BURN_USD, SERVICE_WALLET_PUBLIC, scanUrl } from "./onchain-config";
-import { buildMemoText, isIdempotencyKey, sanitizeNote } from "./onchain-memo";
+import { buildMemoText, parseMemoText, sanitizeNote } from "./onchain-memo";
+import { effectiveFlags } from "./onchain-store";
 import {
-  activityStats,
-  dailySpend,
-  effectiveFlags,
-  findNoteById,
-  findNoteByIdempotency,
-  findNoteByMemoTx,
-  insertActivity,
-  insertNote,
-  listActivity,
-  listNotes,
-  notePublic,
-  patchNote,
-  pendingRecoveries,
-  type NoteRow,
-} from "./onchain-store";
-import { adminKeyIssue, storeWriteError, supabaseAdmin } from "./supabase-admin";
+  assembleFromChain,
+  spendLast24h,
+  type ChainActivity,
+  type ChainStats,
+  type PublicNote,
+} from "./onchain-chain-index";
 
 function servicePublicAddress() {
   return SERVICE_WALLET_PUBLIC;
@@ -39,43 +29,60 @@ export type WriteNoteInput = {
   wallet?: string | null;
 };
 
-function asNote(row: unknown): NoteRow | null {
-  if (!row || typeof row !== "object") return null;
-  const candidate = Array.isArray(row) ? row[0] : row;
-  if (!candidate || typeof candidate !== "object") return null;
-  if (typeof (candidate as NoteRow).id !== "string") return null;
-  return candidate as NoteRow;
+type Assembled = ReturnType<typeof assembleFromChain>;
+
+let scanCache: { at: number; data: Assembled } | null = null;
+
+export function invalidateChainScan() {
+  scanCache = null;
 }
 
-async function publish(
-  note: NoteRow,
-  event: Parameters<typeof insertActivity>[0]["event_type"],
-  message: string,
-  extra: Partial<Parameters<typeof insertActivity>[0]> = {},
-) {
-  await insertActivity({
-    event_type: event,
-    note_id: note.id,
-    wallet_address: extra.wallet_address ?? servicePublicAddress(),
-    note_preview: note.note,
-    message,
-    status: extra.status || "confirmed",
-    transaction_signature: extra.transaction_signature ?? null,
-    related_transaction_signature: extra.related_transaction_signature ?? null,
-    token_mint: extra.token_mint ?? null,
-    token_amount: extra.token_amount ?? null,
-    usd_value: extra.usd_value ?? null,
-    slot: extra.slot ?? null,
-    block_time: extra.block_time ?? null,
-  }).catch(() => {});
+async function loadAssembled(limit = 48): Promise<Assembled> {
+  if (scanCache && Date.now() - scanCache.at < 12_000) return scanCache.data;
+  const { fetchServiceRawTxs } = await loadChain();
+  const txs = await fetchServiceRawTxs(limit);
+  const data = assembleFromChain(txs);
+  scanCache = { at: Date.now(), data };
+  return data;
+}
+
+function fromMemoTx(memo: {
+  signature: string;
+  slot: number | null;
+  blockTime: string | null;
+  explorerUrl: string;
+}, note: string): PublicNote {
+  const at = memo.blockTime || new Date().toISOString();
+  return {
+    id: memo.signature,
+    note,
+    memo: buildMemoText(note),
+    source: "chain",
+    wallet: servicePublicAddress(),
+    memoStatus: "confirmed",
+    buyStatus: "idle",
+    burnStatus: "idle",
+    memoTx: memo.signature,
+    buyTx: null,
+    burnTx: null,
+    memoUrl: memo.explorerUrl,
+    buyUrl: null,
+    burnUrl: null,
+    tokenAmount: null,
+    usdValue: null,
+    solSpent: null,
+    priceUsd: null,
+    createdAt: at,
+    memoConfirmedAt: at,
+    buyConfirmedAt: null,
+    burnConfirmedAt: null,
+    error: null,
+  };
 }
 
 export async function writeOnchainNote(input: WriteNoteInput) {
   const cleaned = sanitizeNote(input.note);
   if (!cleaned.ok) return { ok: false as const, status: 400, error: cleaned.error };
-  if (!supabaseAdmin()) {
-    return { ok: false as const, status: 503, error: adminKeyIssue() || "Notes cannot be stored (missing service role)." };
-  }
   const { serviceWalletReady } = await loadSigner();
   if (!serviceWalletReady()) {
     return { ok: false as const, status: 503, error: "Service wallet is not configured. Notes are not signing." };
@@ -90,166 +97,131 @@ export async function writeOnchainNote(input: WriteNoteInput) {
   if (!perWallet.ok || !global.ok) {
     return { ok: false as const, status: 429, error: "Note rate limit reached. Try again later." };
   }
-  const key = isIdempotencyKey(input.idempotencyKey) ? input.idempotencyKey : randomUUID();
-  const existing = await findNoteByIdempotency(key);
-  if (existing) {
-    if (existing.memo_status === "confirmed" && flags.autoBurnEnabled) {
-      void resumeNote(existing.id);
-    }
-    return { ok: true as const, status: 200, idempotent: true, note: notePublic(existing) };
-  }
 
-  const inserted = await insertNote({
-    idempotency_key: key,
-    source: input.source,
-    wallet: input.wallet || null,
-    note: cleaned.note,
-    memo_text: buildMemoText(cleaned.note),
-    memo_status: "pending",
-    buy_status: "idle",
-    burn_status: "idle",
-  });
-  const note = asNote(inserted.data);
-  if (!inserted.ok || !note) {
-    const again = await findNoteByIdempotency(key);
-    if (again) return { ok: true as const, status: 200, idempotent: true, note: notePublic(again) };
-    const failed = storeWriteError(inserted);
-    return { ok: false as const, status: failed.status, error: failed.error };
+  const existing = await loadAssembled().catch(() => null);
+  const recent = existing?.notes.find(
+    (n) => n.note === cleaned.note && Date.now() - new Date(n.createdAt).getTime() < 15 * 60_000,
+  );
+  if (recent) {
+    if (recent.memoStatus === "confirmed" && flags.autoBurnEnabled && recent.burnStatus !== "confirmed") {
+      void resumeNote(recent.id);
+    }
+    return { ok: true as const, status: 200, idempotent: true, note: recent };
   }
 
   try {
     const { sendMemo } = await loadChain();
-    const memo = await sendMemo(note.memo_text);
-    const patched = await patchNote(note.id, {
-      memo_status: "confirmed",
-      memo_tx: memo.signature,
-      slot: memo.slot,
-      memo_confirmed_at: memo.blockTime || new Date().toISOString(),
-      error: null,
-    });
-    const confirmed = asNote(patched.data) || { ...note, memo_status: "confirmed" as const, memo_tx: memo.signature };
-    await publish(confirmed, "MEMO_CREATED", `New on-chain memo recorded`, {
-      transaction_signature: memo.signature,
-      slot: memo.slot,
-      block_time: memo.blockTime,
-    });
-    await publish(confirmed, "TRANSACTION_CONFIRMED", `Memo confirmed on Solana`, {
-      transaction_signature: memo.signature,
-      related_transaction_signature: memo.signature,
-    });
-    if (flags.autoBurnEnabled) void resumeNote(confirmed.id);
-    return { ok: true as const, status: 201, idempotent: false, note: notePublic(confirmed) };
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    await patchNote(note.id, { memo_status: "failed", error: message.slice(0, 400) });
-    await publish(note, "TRANSACTION_FAILED", `Memo broadcast failed`, { status: "failed" });
+    const memo = await sendMemo(buildMemoText(cleaned.note));
+    invalidateChainScan();
+    let note = fromMemoTx(memo, cleaned.note);
+    if (flags.autoBurnEnabled) {
+      const resumed = await resumeNote(note.id, note);
+      if (resumed) note = resumed;
+    }
+    return { ok: true as const, status: 201, idempotent: false, note };
+  } catch {
     return { ok: false as const, status: 502, error: "Memo was not confirmed on Solana." };
   }
 }
 
-export async function resumeNote(id: string) {
+export async function resumeNote(id: string, seed?: PublicNote | null): Promise<PublicNote | null> {
   const flags = await effectiveFlags();
-  const note = await findNoteById(id);
-  if (!note || note.memo_status !== "confirmed") return note;
+  invalidateChainScan();
+  let assembled: Assembled = { notes: [], activity: [], stats: { totalBurnedUsd: 0, orbitxBurned: 0, totalMemos: 0, totalBuys: 0, solSpent: 0, solSpentNative: 0 } };
+  try {
+    assembled = await loadAssembled();
+  } catch {
+    /* buy/burn can still run from the seed memo */
+  }
+  let note = seed || assembled.notes.find((n) => n.id === id || n.memoTx === id) || null;
+  if (!note || note.memoStatus !== "confirmed") return note;
   if (!flags.autoBurnEnabled) return note;
 
-  const spend = await dailySpend();
+  const spend = spendLast24h(assembled.activity, assembled.notes);
   if (spend.burnUsd >= flags.maxDailyBurnUsd) {
-    await patchNote(id, { error: "Daily $ORBITX buy/burn USD limit reached." });
-    return findNoteById(id);
+    return { ...note, error: "Daily $ORBITX buy/burn USD limit reached." };
   }
   if (spend.sol >= flags.maxDailySolSpend) {
-    await patchNote(id, { error: "Daily SOL spend limit reached." });
-    return findNoteById(id);
+    return { ...note, error: "Daily SOL spend limit reached." };
   }
 
-  let current = note;
-  if (current.buy_status !== "confirmed") {
-    if (current.buy_tx) {
-      await patchNote(id, { buy_status: "confirmed", buy_confirmed_at: current.buy_confirmed_at || new Date().toISOString() });
-    } else {
-      await patchNote(id, { buy_status: "pending", error: null });
-      try {
-        const { buyOrbitxForNote } = await loadChain();
-        const buy = await buyOrbitxForNote();
-        await patchNote(id, {
-          buy_status: "confirmed",
-          buy_tx: buy.tx.signature,
-          token_amount: buy.tokenAmount,
-          usd_value: buy.usdValue,
-          sol_spent: buy.solSpent,
-          price_usd: buy.priceUsd,
-          buy_confirmed_at: buy.tx.blockTime,
-          error: null,
-        });
-        current = (await findNoteById(id)) || current;
-        await publish(current, "ORBITX_PURCHASE", `$ORBITX purchased`, {
-          transaction_signature: buy.tx.signature,
-          related_transaction_signature: current.memo_tx,
-          token_mint: ORBITX_MINT,
-          token_amount: buy.tokenAmount,
-          usd_value: buy.usdValue,
-        });
-      } catch (e) {
-        const message = e instanceof Error ? e.message : String(e);
-        await patchNote(id, { buy_status: "failed", error: message.slice(0, 400) });
-        await publish(current, "TRANSACTION_FAILED", `ORBITX purchase failed`, {
-          status: "failed",
-          related_transaction_signature: current.memo_tx,
-        });
-        return findNoteById(id);
-      }
+  if (note.buyStatus !== "confirmed") {
+    try {
+      const { buyOrbitxForNote } = await loadChain();
+      const buy = await buyOrbitxForNote();
+      note = {
+        ...note,
+        buyStatus: "confirmed",
+        buyTx: buy.tx.signature,
+        buyUrl: scanUrl(buy.tx.signature),
+        tokenAmount: buy.tokenAmount,
+        usdValue: buy.usdValue,
+        solSpent: buy.solSpent,
+        priceUsd: buy.priceUsd,
+        buyConfirmedAt: buy.tx.blockTime,
+        error: null,
+      };
+      invalidateChainScan();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return { ...note, buyStatus: "failed", error: message.slice(0, 400) };
     }
   }
 
-  current = (await findNoteById(id)) || current;
-  if (current.buy_status !== "confirmed") return current;
-  if (current.burn_status === "confirmed" && current.burn_tx) return current;
+  if (note.buyStatus !== "confirmed") return note;
+  if (note.burnStatus === "confirmed" && note.burnTx) return note;
 
-  await patchNote(id, { burn_status: "pending" });
   try {
     const { burnOrbitx } = await loadChain();
-    const burn = await burnOrbitx(Number(current.token_amount || 0) || undefined);
-    await patchNote(id, {
-      burn_status: "confirmed",
-      burn_tx: burn.tx.signature,
-      token_amount: burn.tokenAmount,
-      burn_confirmed_at: burn.tx.blockTime,
+    const burn = await burnOrbitx(Number(note.tokenAmount || 0) || undefined);
+    note = {
+      ...note,
+      burnStatus: "confirmed",
+      burnTx: burn.tx.signature,
+      burnUrl: scanUrl(burn.tx.signature),
+      tokenAmount: burn.tokenAmount,
+      burnConfirmedAt: burn.tx.blockTime,
       error: null,
-    });
-    current = (await findNoteById(id)) || current;
-    await publish(current, "ORBITX_BURN", `$ORBITX burned permanently`, {
-      transaction_signature: burn.tx.signature,
-      related_transaction_signature: current.buy_tx,
-      token_mint: ORBITX_MINT,
-      token_amount: burn.tokenAmount,
-      usd_value: current.usd_value,
-    });
+    };
+    invalidateChainScan();
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    await patchNote(id, { burn_status: "failed", error: message.slice(0, 400) });
-    await publish(current, "TRANSACTION_FAILED", `ORBITX burn failed`, {
-      status: "failed",
-      related_transaction_signature: current.buy_tx,
-    });
+    return { ...note, burnStatus: "failed", error: message.slice(0, 400) };
   }
-  return findNoteById(id);
+  return note;
 }
 
 export async function recoverPending(limit = 6) {
-  const rows = await pendingRecoveries(limit);
+  const assembled = await loadAssembled();
+  const pending = assembled.notes.filter((n) => n.memoStatus === "confirmed" && n.burnStatus !== "confirmed").slice(0, limit);
   const out = [];
-  for (const row of rows) {
+  for (const row of pending) {
     out.push(await resumeNote(row.id));
   }
   return out;
 }
 
 export async function getNoteBySignature(signature: string) {
-  const local = await findNoteByMemoTx(signature);
+  const assembled = await loadAssembled().catch(() => null);
+  let note =
+    assembled?.notes.find((n) => n.memoTx === signature || n.buyTx === signature || n.burnTx === signature) || null;
   const { readMemoFromSignature } = await loadChain();
   const chain = await readMemoFromSignature(signature);
-  return { local: local ? notePublic(local) : null, chain };
+  if (!note && chain.ok && chain.memo) {
+    const parsed = parseMemoText(String(chain.memo).replace(/^"|"$/g, ""));
+    if (parsed.ok) {
+      note = fromMemoTx(
+        {
+          signature,
+          slot: chain.slot ?? null,
+          blockTime: chain.blockTime ?? null,
+          explorerUrl: scanUrl(signature),
+        },
+        parsed.note,
+      );
+    }
+  }
+  return { note, local: note, chain };
 }
 
 export async function publicFeed(input: { type?: string; limit?: number; offset?: number }) {
@@ -265,28 +237,76 @@ export async function publicFeed(input: { type?: string; limit?: number; offset?
     ORBITX_BURN: "ORBITX_BURN",
   };
   const eventType = typeMap[String(input.type || "ALL").toUpperCase()] || "ALL";
-  const [rows, stats] = await Promise.all([listActivity({ eventType, limit, offset }), activityStats()]);
-  return {
-    ok: true,
-    items: Array.isArray(rows.data) ? rows.data : [],
-    stats,
-    limit,
-    offset,
-    nextOffset: offset + limit,
-  };
+  try {
+    const assembled = await loadAssembled(Math.min(80, offset + limit + 8));
+    const items =
+      eventType === "ALL"
+        ? assembled.activity
+        : assembled.activity.filter((a: ChainActivity) => a.event_type === eventType);
+    return {
+      ok: true,
+      source: "solana",
+      items: items.slice(offset, offset + limit),
+      stats: assembled.stats,
+      limit,
+      offset,
+      nextOffset: offset + limit,
+    };
+  } catch {
+    return {
+      ok: true,
+      source: "solana",
+      items: [] as ChainActivity[],
+      stats: {
+        totalBurnedUsd: 0,
+        orbitxBurned: 0,
+        totalMemos: 0,
+        totalBuys: 0,
+        solSpent: 0,
+        solSpentNative: 0,
+      } satisfies ChainStats,
+      limit,
+      offset,
+      nextOffset: offset + limit,
+    };
+  }
 }
 
 export async function notesIndex(input: { wallet?: string; search?: string; limit?: number; offset?: number }) {
   const limit = Math.min(50, Math.max(1, Number(input.limit || 20)));
   const offset = Math.max(0, Number(input.offset || 0));
-  const res = await listNotes({ wallet: input.wallet, search: input.search, limit, offset });
-  return { ok: true, items: (Array.isArray(res.data) ? res.data : []).map(notePublic), limit, offset };
+  try {
+    const assembled = await loadAssembled(Math.min(80, offset + limit + 8));
+    let items = assembled.notes;
+    if (input.wallet) items = items.filter((n) => n.wallet === input.wallet);
+    if (input.search) {
+      const q = input.search.toLowerCase();
+      items = items.filter((n) => n.note.toLowerCase().includes(q));
+    }
+    return { ok: true, source: "solana", items: items.slice(offset, offset + limit), limit, offset };
+  } catch {
+    return { ok: true, source: "solana", items: [] as PublicNote[], limit, offset };
+  }
 }
 
 export async function walletStatus() {
   const flags = await effectiveFlags();
-  const stats = await activityStats();
-  const spend = await dailySpend().catch(() => ({ burnUsd: 0, sol: 0 }));
+  let stats: ChainStats = {
+    totalBurnedUsd: 0,
+    orbitxBurned: 0,
+    totalMemos: 0,
+    totalBuys: 0,
+    solSpent: 0,
+    solSpentNative: 0,
+  };
+  let spend = { burnUsd: 0, sol: 0 };
+  try {
+    const assembled = await loadAssembled();
+    stats = assembled.stats;
+    spend = spendLast24h(assembled.activity, assembled.notes);
+  } catch {
+    /* chain unread — still return wallet */
+  }
   const fallback = {
     ok: true as const,
     wallet: servicePublicAddress(),
@@ -302,7 +322,7 @@ export async function walletStatus() {
     maxDailySolSpend: flags.maxDailySolSpend,
     spentTodayUsd: spend.burnUsd,
     spentTodaySol: spend.sol,
-    dbReady: Boolean(supabaseAdmin()),
+    source: "solana",
     marketPriceUsd: null as number | null,
     estimatedSolForNote: null as number | null,
     stats,
@@ -341,18 +361,9 @@ export async function adminBurnOrbitx(amountUi?: number) {
   if (!flags.autoBurnEnabled) return { ok: false as const, error: "Auto-burn is paused." };
   const { burnOrbitx } = await loadChain();
   const burn = await burnOrbitx(amountUi);
-  await insertActivity({
-    event_type: "ORBITX_BURN",
-    transaction_signature: burn.tx.signature,
-    wallet_address: servicePublicAddress(),
-    token_mint: ORBITX_MINT,
-    token_amount: burn.tokenAmount,
-    usd_value: NOTE_BURN_USD,
-    message: "Admin $ORBITX burn",
-    status: "confirmed",
-    note_preview: null,
-  });
+  invalidateChainScan();
   return { ok: true as const, signature: burn.tx.signature, explorerUrl: scanUrl(burn.tx.signature), tokenAmount: burn.tokenAmount };
 }
 
-export { notePublic, scanUrl };
+export { scanUrl };
+export type { PublicNote };

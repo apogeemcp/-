@@ -425,7 +425,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "list_onchain_notes",
-    description: "List indexed on-chain notes with optional wallet, search, and pagination.",
+    description: "List on-chain notes by reading confirmed Solana memos from the service wallet.",
     inputSchema: {
       type: "object",
       properties: {

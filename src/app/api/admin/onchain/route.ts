@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { corsHeaders } from "@/lib/mcp";
 import { adminAuthorized, adminSecretConfigured } from "@/lib/admin-auth";
-import { adminBurnOrbitx, recoverPending, walletStatus } from "@/lib/onchain-service";
-import { listActivity } from "@/lib/onchain-store";
+import { adminBurnOrbitx, publicFeed, recoverPending, walletStatus } from "@/lib/onchain-service";
 import { patchSettings } from "@/lib/onchain-store";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +20,8 @@ function deny(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const blocked = deny(req);
   if (blocked) return blocked;
-  const [status, feed] = await Promise.all([walletStatus(), listActivity({ limit: 40, offset: 0, includeFailed: true })]);
-  return NextResponse.json({ ok: true, status, activity: feed.data || [] }, { headers: corsHeaders });
+  const [status, feed] = await Promise.all([walletStatus(), publicFeed({ type: "ALL", limit: 40 })]);
+  return NextResponse.json({ ok: true, status, activity: feed.items }, { headers: corsHeaders });
 }
 
 export async function POST(req: NextRequest) {
