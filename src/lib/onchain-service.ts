@@ -47,10 +47,17 @@ async function loadSql() {
   return import("./onchain-sql");
 }
 
+async function persistSafe(data: Assembled) {
+  try {
+    const sql = await loadSql();
+    await sql.persistAssembled(data);
+  } catch {
+    /* chain remains source of truth */
+  }
+}
+
 function persistQuiet(data: Assembled) {
-  void loadSql()
-    .then((sql) => sql.persistAssembled(data))
-    .catch(() => undefined);
+  void persistSafe(data);
 }
 
 async function persistNoteSafe(note: PublicNote) {
@@ -111,7 +118,7 @@ async function loadAssembled(limit = 48): Promise<Assembled> {
     const next = await scanChain(limit);
     const combined = mergeAssembled(fromSql, next);
     scanCache = { at: Date.now(), data: combined };
-    persistQuiet(combined);
+    await persistSafe(combined);
     return combined;
   } catch (error) {
     if (fromSql) return fromSql;
