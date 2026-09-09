@@ -33,9 +33,14 @@ export async function sbRest<T>(
     }
   }
   if (!res.ok) {
-    return { ok: false, status: res.status, data, error: text.slice(0, 400) || `HTTP ${res.status}` };
+    // Never return the error JSON as `data` — callers treat it as a row list.
+    return { ok: false, status: res.status, data: null, error: text.slice(0, 400) || `HTTP ${res.status}` };
   }
   return { ok: true, status: res.status, data };
+}
+
+export function asRowArray<T>(data: unknown): T[] {
+  return Array.isArray(data) ? (data as T[]) : [];
 }
 
 export async function sbInsert<T extends Record<string, unknown>>(table: string, row: T) {

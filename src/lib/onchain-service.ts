@@ -41,8 +41,10 @@ export type WriteNoteInput = {
 
 function asNote(row: unknown): NoteRow | null {
   if (!row || typeof row !== "object") return null;
-  if (Array.isArray(row)) return (row[0] as NoteRow) || null;
-  return row as NoteRow;
+  const candidate = Array.isArray(row) ? row[0] : row;
+  if (!candidate || typeof candidate !== "object") return null;
+  if (typeof (candidate as NoteRow).id !== "string") return null;
+  return candidate as NoteRow;
 }
 
 async function publish(
@@ -111,7 +113,15 @@ export async function writeOnchainNote(input: WriteNoteInput) {
   if (!inserted.ok || !note) {
     const again = await findNoteByIdempotency(key);
     if (again) return { ok: true as const, status: 200, idempotent: true, note: notePublic(again) };
-    return { ok: false as const, status: 502, error: inserted.error || "Could not create the note record." };
+    const authFailed =
+      inserted.status === 401 ||
+      inserted.status === 403 ||
+      /invalid api key|jwt|service role/i.test(inserted.error || "");
+    return {
+      ok: false as const,
+      status: authFailed ? 503 : 502,
+      error: authFailed ? "Notes cannot be stored (service role rejected)." : "Could not create the note record.",
+    };
   }
 
   try {
@@ -265,7 +275,7 @@ export async function publicFeed(input: { type?: string; limit?: number; offset?
   const [rows, stats] = await Promise.all([listActivity({ eventType, limit, offset }), activityStats()]);
   return {
     ok: true,
-    items: rows.data || [],
+    items: Array.isArray(rows.data) ? rows.data : [],
     stats,
     limit,
     offset,
@@ -277,13 +287,13 @@ export async function notesIndex(input: { wallet?: string; search?: string; limi
   const limit = Math.min(50, Math.max(1, Number(input.limit || 20)));
   const offset = Math.max(0, Number(input.offset || 0));
   const res = await listNotes({ wallet: input.wallet, search: input.search, limit, offset });
-  return { ok: true, items: (res.data || []).map(notePublic), limit, offset };
+  return { ok: true, items: (Array.isArray(res.data) ? res.data : []).map(notePublic), limit, offset };
 }
 
 export async function walletStatus() {
   const flags = await effectiveFlags();
   const stats = await activityStats();
-  const spend = await dailySpend();
+  const spend = await dailySpend().catch(() => ({ burnUsd: 0, sol: 0 }));
   const fallback = {
     ok: true as const,
     wallet: servicePublicAddress(),
