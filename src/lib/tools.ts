@@ -403,7 +403,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "write_onchain_note",
     description:
-      "Write a permanent Solana memo (ORBITX_NOTE:v1) via the Apogee service wallet, then queue ~$0.02 of $ORBITX buy-and-burn. Public and irreversible. Rate limited. Returns signature + Solscan URL. Never send secrets.",
+      "Write a permanent Solana memo (ORBITX_NOTE:v1) via the Apogee service wallet, then buy and burn ~$0.03 of $ORBITX (keeping a $0.15 float). Public and irreversible. Rate limited. Returns signature + Solscan URL. Never send secrets.",
     inputSchema: {
       type: "object",
       properties: {
@@ -474,7 +474,7 @@ Rules:
 - Never ask for a seed phrase or private key.
 - Wallet tracking (track_wallet, get_wallet_pnl, get_wallet_txs) is read-only.
 - prepare_pons_launch returns an unsigned tx for the user to sign in Phantom (ethereum provider) after wallet_addEthereumChain for 4663. Do not claim a launch or swap executed unless the user reports a tx hash.
-- On-chain notes: write_onchain_note records a public Solana memo via the Apogee service wallet and queues ~$0.02 of $ORBITX buy-and-burn. Notes are permanent. Never put secrets or personal data in a memo. Repeat idempotencyKey to avoid duplicates. burn_orbitx is admin-only.
+- On-chain notes: write_onchain_note records a public Solana memo via the Apogee service wallet and buys ~$0.03 of $ORBITX to burn, keeping a $0.15 float. Notes are permanent. Never put secrets or personal data in a memo. Repeat idempotencyKey to avoid duplicates. burn_orbitx is admin-only.
 - Stock Tokens may not be offered to US/Canada/UK/Switzerland persons.
 - Prefer scan_token before size, get_desk for a market snapshot, list_launches / list_pons_launches for new tokens, track_wallet for an address.
 pons (write the name in lowercase; link https://www.ponsfamily.com/launchpad):

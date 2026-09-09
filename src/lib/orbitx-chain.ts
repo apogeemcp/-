@@ -13,7 +13,6 @@ import {
   TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
   createBurnInstruction,
-  createCloseAccountInstruction,
   getAssociatedTokenAddressSync,
   getMint,
 } from "@solana/spl-token";
@@ -21,7 +20,10 @@ import {
   MEMO_PROGRAM_ID,
   NOTE_BURN_USD,
   ORBITX_MINT,
+  ORBITX_RESERVE_USD,
   WSOL_MINT,
+  orbitxBurnUi,
+  orbitxBuyUsd,
   scanUrl,
   solanaRpc,
 } from "./onchain-config";
@@ -136,6 +138,39 @@ async function solPriceUsd(): Promise<number | null> {
   return Number.isFinite(c) && c > 0 ? c : null;
 }
 
+export async function sizeNoteBuy(heldOrbitxUi?: number): Promise<{
+  usd: number;
+  burnUsd: number;
+  reserveUsd: number;
+  solLamports: number;
+  solAmount: number;
+  priceUsd: number;
+  solUsd: number;
+  heldUsd: number;
+}> {
+  const [token, solUsd, held] = await Promise.all([
+    orbitxMarketPrice(),
+    solPriceUsd(),
+    heldOrbitxUi == null ? serviceBalances().then((b) => b.orbitx) : Promise.resolve(heldOrbitxUi),
+  ]);
+  if (!token) throw new Error("No executable $ORBITX market price is available.");
+  if (!solUsd) throw new Error("Could not read SOL/USD for sizing the $ORBITX buy.");
+  const heldUsd = Math.max(0, held) * token.priceUsd;
+  const usd = orbitxBuyUsd(heldUsd);
+  const solAmount = usd / solUsd;
+  const solLamports = Math.max(5_000, Math.ceil(solAmount * LAMPORTS_PER_SOL * 1.01));
+  return {
+    usd,
+    burnUsd: NOTE_BURN_USD,
+    reserveUsd: ORBITX_RESERVE_USD,
+    solLamports,
+    solAmount: solLamports / LAMPORTS_PER_SOL,
+    priceUsd: token.priceUsd,
+    solUsd,
+    heldUsd,
+  };
+}
+
 export async function sizeNoteBurn(): Promise<{
   usd: number;
   solLamports: number;
@@ -143,12 +178,14 @@ export async function sizeNoteBurn(): Promise<{
   priceUsd: number;
   solUsd: number;
 }> {
-  const [token, solUsd] = await Promise.all([orbitxMarketPrice(), solPriceUsd()]);
-  if (!token) throw new Error("No executable $ORBITX market price is available.");
-  if (!solUsd) throw new Error("Could not read SOL/USD for sizing the $0.02 buy.");
-  const solAmount = NOTE_BURN_USD / solUsd;
-  const solLamports = Math.max(5_000, Math.ceil(solAmount * LAMPORTS_PER_SOL * 1.01));
-  return { usd: NOTE_BURN_USD, solLamports, solAmount: solLamports / LAMPORTS_PER_SOL, priceUsd: token.priceUsd, solUsd };
+  const size = await sizeNoteBuy();
+  return {
+    usd: size.usd,
+    solLamports: size.solLamports,
+    solAmount: size.solAmount,
+    priceUsd: size.priceUsd,
+    solUsd: size.solUsd,
+  };
 }
 
 async function jupiterSwap(lamports: number): Promise<{ signature: string; outAmountRaw: string; outUi: number }> {
@@ -211,6 +248,16 @@ async function jupiterSwap(lamports: number): Promise<{ signature: string; outAm
   return { signature, outAmountRaw: outRaw, outUi };
 }
 
+async function waitForOrbitxIncrease(beforeUi: number, quotedUi: number): Promise<number> {
+  for (let i = 0; i < 6; i++) {
+    const now = (await serviceBalances()).orbitx;
+    if (now > beforeUi) return now;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  const last = (await serviceBalances()).orbitx;
+  return last > beforeUi ? last : beforeUi + Math.max(0, quotedUi);
+}
+
 export async function buyOrbitxForNote(): Promise<{
   tx: ConfirmedTx;
   tokenAmount: number;
@@ -218,16 +265,18 @@ export async function buyOrbitxForNote(): Promise<{
   solSpent: number;
   priceUsd: number;
 }> {
-  const size = await sizeNoteBurn();
   const balances = await serviceBalances();
+  const size = await sizeNoteBuy(balances.orbitx);
   if (balances.sol < size.solAmount + 0.002) {
-    throw new Error("Service wallet does not have enough SOL to buy $0.02 of $ORBITX.");
+    throw new Error(`Service wallet does not have enough SOL to buy $${size.usd.toFixed(2)} of $ORBITX.`);
   }
   const swap = await jupiterSwap(size.solLamports);
+  const after = await waitForOrbitxIncrease(balances.orbitx, swap.outUi);
+  const burnUi = orbitxBurnUi(after, size.priceUsd);
   return {
     tx: { signature: swap.signature, slot: null, blockTime: new Date().toISOString(), explorerUrl: scanUrl(swap.signature) },
-    tokenAmount: swap.outUi,
-    usdValue: size.usd,
+    tokenAmount: burnUi,
+    usdValue: NOTE_BURN_USD,
     solSpent: size.solAmount,
     priceUsd: size.priceUsd,
   };
@@ -242,20 +291,29 @@ export async function burnOrbitx(amountUi?: number): Promise<{ tx: ConfirmedTx; 
   const ata = getAssociatedTokenAddressSync(mint, payer.publicKey, false, program);
   const bal = await conn.getTokenAccountBalance(ata, "confirmed");
   const have = BigInt(bal.value.amount);
-  if (have <= 0n) throw new Error("Service wallet holds no $ORBITX to burn.");
-  let burnAmount = have;
-  if (amountUi != null && Number.isFinite(amountUi) && amountUi > 0) {
-    const wanted = BigInt(Math.floor(amountUi * 10 ** mintInfo.decimals));
-    if (wanted > 0n && wanted <= have) burnAmount = wanted;
+  if (have <= 1n) throw new Error("Service wallet holds no spare $ORBITX to burn.");
+  const price = (await orbitxMarketPrice())?.priceUsd ?? 0;
+  const heldUi = Number(bal.value.uiAmount || 0);
+  const reserveUi = price > 0 ? ORBITX_RESERVE_USD / price : 0;
+  const reserveRaw =
+    price > 0 ? BigInt(Math.ceil(reserveUi * 10 ** mintInfo.decimals)) : 1n;
+  const minKeep = reserveRaw > 1n ? reserveRaw : 1n;
+  const maxBurn = have > minKeep ? have - minKeep : 0n;
+  if (maxBurn <= 0n) {
+    throw new Error("Keeping the $0.15 $ORBITX float so the token account stays open.");
   }
-  const tx = new Transaction().add(
-    createBurnInstruction(ata, mint, payer.publicKey, burnAmount, [], program),
-    createCloseAccountInstruction(ata, payer.publicKey, payer.publicKey, [], program),
-  );
-  // Keep the ATA if leftover tokens remain.
-  if (burnAmount < have) {
-    tx.instructions.pop();
+  let burnAmount = 0n;
+  const wantedUi =
+    amountUi != null && Number.isFinite(amountUi) && amountUi > 0
+      ? amountUi
+      : orbitxBurnUi(heldUi, price);
+  const wanted = BigInt(Math.floor(wantedUi * 10 ** mintInfo.decimals));
+  if (wanted > 0n) burnAmount = wanted < maxBurn ? wanted : maxBurn;
+  if (burnAmount <= 0n) {
+    throw new Error("Keeping the $0.15 $ORBITX float; nothing extra to burn.");
   }
+  // Never close the ATA — the $0.15 float stays so later swaps skip rent.
+  const tx = new Transaction().add(createBurnInstruction(ata, mint, payer.publicKey, burnAmount, [], program));
   const signature = await sendAndConfirmTransaction(conn, tx, [payer], { commitment: "confirmed", maxRetries: 3 });
   return {
     tx: { signature, slot: null, blockTime: new Date().toISOString(), explorerUrl: scanUrl(signature) },

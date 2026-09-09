@@ -78,7 +78,7 @@ export const GUIDES = {
   },
   onchain: {
     title: "How on-chain notes work",
-    body: "You write text. The service wallet records it as a Solana memo (ORBITX_NOTE:v1:…). After confirmation it buys about $0.02 of $ORBITX and burns it. Solana is the source of truth; Postgres stores a copy so the feed, memo, and price do not wait on RPC. On Solscan, Overview often hides memos: open Instructions, Program logs, or Raw.",
+    body: "You write text. The service wallet records it as a Solana memo (ORBITX_NOTE:v1:…). After confirmation it buys and burns about $0.03 of $ORBITX, keeping a $0.15 $ORBITX float so the token account stays open. Solana is the source of truth; Postgres stores a copy so the feed, memo, and price do not wait on RPC. On Solscan, Overview often hides memos: open Instructions, Program logs, or Raw.",
   },
 } as const;
 
@@ -149,7 +149,7 @@ export const FAQ = [
       },
       {
         q: "What are on-chain notes?",
-        a: "write_onchain_note records a public Solana memo from the Apogee service wallet, then queues about $0.02 of $ORBITX buy-and-burn. The feed on /onchain-notes shows confirmed signatures only. Do not put secrets in a memo.",
+        a: "write_onchain_note records a public Solana memo from the Apogee service wallet, then buys and burns about $0.03 of $ORBITX (keeping a $0.15 float so the token account stays rented). The feed on /onchain-notes shows confirmed signatures only. Do not put secrets in a memo.",
       },
       {
         q: "Can I embed Apogee in my own product?",

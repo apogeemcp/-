@@ -6,7 +6,10 @@ import {
   NOTE_BURN_USD,
   NOTE_MAX_CHARS,
   ORBITX_MINT,
+  ORBITX_RESERVE_USD,
   SERVICE_WALLET_PUBLIC,
+  orbitxBurnUi,
+  orbitxBuyUsd,
 } from "../src/lib/onchain-config";
 import {
   buildMemoText,
@@ -57,7 +60,16 @@ describe("on-chain notes", () => {
   });
 
   it("sizes burns in USD, not a hardcoded token count", () => {
-    expect(NOTE_BURN_USD).toBe(0.02);
+    expect(NOTE_BURN_USD).toBe(0.03);
+    expect(ORBITX_RESERVE_USD).toBe(0.15);
+    expect(orbitxBuyUsd(0)).toBe(0.18);
+    expect(orbitxBuyUsd(0.15)).toBe(0.03);
+    expect(orbitxBuyUsd(0.1)).toBe(0.08);
+    expect(orbitxBuyUsd(0.2)).toBe(0.03);
+    expect(orbitxBurnUi(0, 0.001)).toBe(0);
+    expect(orbitxBurnUi(180, 0.001)).toBe(30);
+    expect(orbitxBurnUi(150, 0.001)).toBe(0);
+    expect(orbitxBurnUi(160, 0.001)).toBe(10);
     expect(ORBITX_MINT).toBe("13H4WJvGEg4xrrBwWn2vsQgz7xhmhxgNdw19i1QsxPX9");
     expect(SERVICE_WALLET_PUBLIC).toMatch(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
   });

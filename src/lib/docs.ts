@@ -68,7 +68,7 @@ export function toolSafety(name: string): { class: SafetyClass; note: string } {
   if (name === "write_onchain_note") {
     return {
       class: "FINANCIAL / HIGH IMPACT",
-      note: "Broadcasts a public Solana memo from the Apogee service wallet and queues a ~$0.02 $ORBITX buy-and-burn. Permanent. Rate limited. Do not put secrets in the note.",
+      note: "Broadcasts a public Solana memo from the Apogee service wallet and buys ~$0.03 of $ORBITX to burn, keeping a $0.15 float. Permanent. Rate limited. Do not put secrets in the note.",
     };
   }
   if (name === "burn_orbitx") {

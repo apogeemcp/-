@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { NOTE_MAX_CHARS, SERVICE_WALLET_PUBLIC } from "@/lib/onchain-config";
+import { NOTE_MAX_CHARS, ORBITX_RESERVE_USD, SERVICE_WALLET_PUBLIC } from "@/lib/onchain-config";
 import { readResponseJson } from "@/lib/read-json";
 import { useWallet } from "./WalletProvider";
 import { RawOnchainMemo, SolscanMemoLinks } from "./SolscanMemoLinks";
@@ -88,17 +88,24 @@ export function OnchainComposer() {
     if (!last?.id) return;
     if (last.memoStatus === "confirmed" && last.buyStatus === "confirmed" && last.burnStatus === "confirmed") return;
     if (last.buyStatus === "failed" || last.burnStatus === "failed") return;
-    const t = setInterval(async () => {
+    let cancelled = false;
+    async function tick() {
+      if (cancelled || !last?.id) return;
       try {
         const resume = last.buyStatus === "idle" || last.burnStatus === "idle" ? "?resume=1" : "";
         const res = await fetch(`/api/onchain/notes/${encodeURIComponent(last.id)}${resume}`);
         const json = await readResponseJson<{ note?: Note }>(res);
-        if (json.note) setLast(json.note);
+        if (!cancelled && json.note) setLast(json.note);
       } catch {
         /* keep the receipt we already have */
       }
-    }, 8000);
-    return () => clearInterval(t);
+    }
+    void tick();
+    const t = setInterval(() => void tick(), 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
   }, [last?.id, last?.memoStatus, last?.buyStatus, last?.burnStatus]);
 
   const canWrite = useMemo(() => text.trim().length > 0 && remaining >= 0 && !busy, [text, remaining, busy]);
@@ -154,7 +161,8 @@ export function OnchainComposer() {
           <p>Notes recorded · {info?.stats?.totalMemos ?? 0}</p>
         </div>
         <p className="mt-3 text-[12px] text-ivory/55">
-          Each qualifying note targets ${info?.noteBurnUsd ?? 0.02} of $ORBITX buy-and-burn after the memo confirms.
+          Each qualifying note buys and burns ${info?.noteBurnUsd ?? 0.03} of $ORBITX. The service wallet keeps a ${ORBITX_RESERVE_USD.toFixed(2)}
+          $ORBITX float so the token account stays open and later buys stay under a cent of fees.
           {info && !info.notesEnabled ? " Notes are currently paused." : ""}
           {info && !info.autoBurnEnabled ? " Auto-burn is paused." : ""}
           {info && !info.ready ? " Service wallet key is not configured on this host — memos will not sign." : ""}

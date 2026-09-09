@@ -5,7 +5,10 @@ export const ORBITX_MINT = process.env.ORBITX_MINT?.trim() || PROJECT_CA;
 export const MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 export const MEMO_PREFIX = "ORBITX_NOTE:v1:";
 export const NOTE_MAX_CHARS = 240;
-export const NOTE_BURN_USD = 0.02;
+/** USD of $ORBITX burned on each qualifying memo. */
+export const NOTE_BURN_USD = 0.03;
+/** Permanent $ORBITX float so the ATA stays open and later swaps skip rent. */
+export const ORBITX_RESERVE_USD = 0.15;
 export const WSOL_MINT = "So11111111111111111111111111111111111111112";
 export const SOLANA_NETWORK = "mainnet-beta";
 
@@ -65,4 +68,24 @@ export function defaultDailyBurnUsd(): number {
 
 export function defaultDailySolSpend(): number {
   return envNumber("MAX_DAILY_SOL_SPEND", 1);
+}
+
+export function roundUsd(n: number): number {
+  return Math.round(n * 1e6) / 1e6;
+}
+
+/** SOL→$ORBITX swap size: top up the $0.15 float, then buy the $0.03 burn slice. */
+export function orbitxBuyUsd(heldUsd: number): number {
+  const gap = Math.max(0, ORBITX_RESERVE_USD - Math.max(0, heldUsd));
+  return roundUsd(gap + NOTE_BURN_USD);
+}
+
+/** Burn only the $0.03 slice and never dip below the $0.15 float. */
+export function orbitxBurnUi(heldUi: number, priceUsd: number): number {
+  if (!(heldUi > 0) || !(priceUsd > 0)) return 0;
+  const reserveUi = ORBITX_RESERVE_USD / priceUsd;
+  const burnUi = NOTE_BURN_USD / priceUsd;
+  const spare = heldUi - reserveUi;
+  if (spare <= 0) return 0;
+  return Math.min(burnUi, spare);
 }

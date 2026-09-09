@@ -7,7 +7,7 @@ import { SERVICE_WALLET_PUBLIC } from "@/lib/onchain-config";
 
 export const metadata = {
   title: "On-chain notes",
-  description: "Write permanent notes to Solana. Each qualifying memo queues about $0.02 of $ORBITX buy-and-burn.",
+  description: "Write permanent notes to Solana. Each qualifying memo buys and burns about $0.03 of $ORBITX.",
 };
 
 export default function OnchainNotesPage() {
@@ -17,7 +17,7 @@ export default function OnchainNotesPage() {
         kicker="On-chain notes"
         title="Write permanent notes directly to Solana"
         focus="desk"
-        lede="The Apogee service wallet records your text as a Solana memo, then buys and burns about $0.02 of $ORBITX. Confirmed transactions are indexed in Postgres so this page stays fast when RPC is slow. Nothing is fabricated."
+        lede="The Apogee service wallet records your text as a Solana memo, then buys and burns about $0.03 of $ORBITX. A $0.15 $ORBITX float stays in the token account so later swaps skip rent. Confirmed transactions are indexed in Postgres so this page stays fast when RPC is slow. Nothing is fabricated."
       />
       <PageFrame>
         <GuidePanel title={GUIDES.onchain.title} body={GUIDES.onchain.body} href="/developers/onchain" />

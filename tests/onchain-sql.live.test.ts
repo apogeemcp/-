@@ -39,7 +39,7 @@ describe.skipIf(!live)("on-chain SQL index", () => {
     const loaded = await loadAssembledFromSql(20);
     expect(loaded?.notes[0].note).toBe("SQL index smoke");
     expect(loaded?.notes[0].priceUsd).toBe(0.000034);
-    expect(loaded?.notes[0].usdValue).toBe(0.02);
+    expect(loaded?.notes[0].usdValue).toBe(0.03);
     expect(loaded?.activity.some((a) => a.event_type === "MEMO_CREATED" && a.memo?.includes("SQL index smoke"))).toBe(true);
     const snap = await loadWalletSnapshot();
     expect(snap?.priceUsd).toBe(0.000034);

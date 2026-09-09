@@ -192,7 +192,8 @@ export async function writeOnchainNote(input: WriteNoteInput) {
   );
   if (recent) {
     if (recent.memoStatus === "confirmed" && flags.autoBurnEnabled && recent.burnStatus !== "confirmed") {
-      void resumeNote(recent.id, recent);
+      const resumed = await resumeNote(recent.id, recent);
+      return { ok: true as const, status: 200, idempotent: true, note: resumed || recent };
     }
     return { ok: true as const, status: 200, idempotent: true, note: recent };
   }
@@ -203,7 +204,7 @@ export async function writeOnchainNote(input: WriteNoteInput) {
     let note = fromMemoTx(memo, cleaned.note);
     await persistNoteSafe(note);
     if (flags.autoBurnEnabled) {
-      void resumeNote(note.id, note);
+      note = (await resumeNote(note.id, note)) || note;
     }
     return { ok: true as const, status: 201, idempotent: false, note };
   } catch {

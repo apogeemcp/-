@@ -9,7 +9,7 @@ Internal gate for Apogee (`apogeemcp.digital`). Do not claim a box is done unles
 - MCP is Streamable HTTP `POST /api/mcp` (alias `/mcp`), protocol `2025-03-26`, **`auth: none`**.
 - There are **no user accounts**, OAuth, API keys, paid MCP tiers, or cost-basis PnL.
 - `$ORBITX` MCP-access buy-and-burn after treasury payment stays **manual** until an admin records a burn signature.
-- On-chain notes (`/onchain-notes`) are a separate service-wallet flow: real Solana memos + optional ~$0.02 $ORBITX buy/burn. Requires `ORBITX_SERVICE_PRIVATE_KEY` on Vercel. Never put that key in git, Supabase, or the client.
+- On-chain notes (`/onchain-notes`) are a separate service-wallet flow: real Solana memos + ~$0.03 $ORBITX buy/burn, keeping a $0.15 $ORBITX float. Requires `ORBITX_SERVICE_PRIVATE_KEY` on Vercel. Never put that key in git, Supabase, or the client.
 - GitHub is `https://github.com/apogeemcp/-`. Project CA is copy-only — no invented explorer.
 
 ## Gate
