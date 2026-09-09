@@ -277,7 +277,7 @@ export async function walletStatus() {
   ]);
   let fee: number | null = null;
   try {
-    const sized = serviceWalletReady() ? await sizeNoteBurn().catch(() => null) : null;
+    const sized = await sizeNoteBurn().catch(() => null);
     fee = sized?.solAmount ?? null;
   } catch {
     fee = null;
