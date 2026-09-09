@@ -7,6 +7,7 @@ import {
   VersionedTransaction,
   sendAndConfirmTransaction,
   LAMPORTS_PER_SOL,
+  type ParsedTransactionWithMeta,
 } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
@@ -305,10 +306,7 @@ export type RawServiceTx = {
   solDelta: number;
 };
 
-function memoFromParsed(parsed: {
-  transaction?: { message?: { instructions?: unknown[] } };
-  meta?: { logMessages?: string[] | null; innerInstructions?: Array<{ instructions?: unknown[] }> | null };
-}): string | null {
+function memoFromParsed(parsed: ParsedTransactionWithMeta): string | null {
   const outer = (parsed.transaction?.message?.instructions || []) as Array<{
     programId?: PublicKey | string;
     parsed?: { type?: string; info?: { memo?: string } };
@@ -333,17 +331,9 @@ function memoFromParsed(parsed: {
   return line.replace(/^Program log: Memo \(len \d+\): /, "").replace(/^Program log: /, "").replace(/^"|"$/g, "");
 }
 
-function orbitxDeltaForWallet(
-  parsed: {
-    meta?: {
-      preTokenBalances?: Array<{ mint?: string; owner?: string; uiTokenAmount?: { uiAmount?: number | null } }>;
-      postTokenBalances?: Array<{ mint?: string; owner?: string; uiTokenAmount?: { uiAmount?: number | null } }>;
-    };
-  },
-  owner: string,
-): number {
+function orbitxDeltaForWallet(parsed: ParsedTransactionWithMeta, owner: string): number {
   const sum = (
-    rows: Array<{ mint?: string; owner?: string; uiTokenAmount?: { uiAmount?: number | null } }> | undefined,
+    rows: { mint: string; owner?: string; uiTokenAmount?: { uiAmount?: number | null } }[] | null | undefined,
   ) =>
     (rows || [])
       .filter((b) => b.mint === ORBITX_MINT && b.owner === owner)
@@ -351,18 +341,9 @@ function orbitxDeltaForWallet(
   return sum(parsed.meta?.postTokenBalances) - sum(parsed.meta?.preTokenBalances);
 }
 
-function solDeltaForWallet(
-  parsed: {
-    transaction?: { message?: { accountKeys?: Array<{ pubkey?: PublicKey | string } | string> } };
-    meta?: { preBalances?: number[]; postBalances?: number[] };
-  },
-  owner: string,
-): number {
-  const keys = parsed.transaction?.message?.accountKeys || [];
-  const idx = keys.findIndex((k) => {
-    const pk = typeof k === "string" ? k : typeof k?.pubkey === "string" ? k.pubkey : k?.pubkey?.toBase58?.();
-    return pk === owner;
-  });
+function solDeltaForWallet(parsed: ParsedTransactionWithMeta, owner: string): number {
+  const keys = parsed.transaction.message.accountKeys || [];
+  const idx = keys.findIndex((k) => k.pubkey.toBase58() === owner);
   if (idx < 0) return 0;
   const pre = Number(parsed.meta?.preBalances?.[idx] || 0);
   const post = Number(parsed.meta?.postBalances?.[idx] || 0);
