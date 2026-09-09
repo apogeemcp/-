@@ -90,10 +90,14 @@ describe("on-chain notes", () => {
       "get_onchain_activity",
       "get_service_wallet_status",
       "burn_orbitx",
+      "write_token_seal",
+      "list_token_seals",
+      "list_burn_tokens",
     ]) {
       expect(names).toContain(name);
     }
     expect(toolSafety("write_onchain_note").class).toBe("FINANCIAL / HIGH IMPACT");
+    expect(toolSafety("write_token_seal").class).toBe("FINANCIAL / HIGH IMPACT");
     expect(toolSafety("burn_orbitx").class).toBe("FINANCIAL / HIGH IMPACT");
     const walletTool = TOOLS.find((t) => t.name === "get_service_wallet_status");
     expect(walletTool?.inputSchema).toEqual({ type: "object", properties: {} });

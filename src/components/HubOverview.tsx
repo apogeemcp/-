@@ -91,6 +91,9 @@ export function HubOverview() {
         <Link href="/onchain-notes" className="btn-ghost">
           On-chain notes
         </Link>
+        <Link href="/onchain-seals" className="btn-ghost">
+          Token seals
+        </Link>
         <Link href="/developers/mcp" className="btn-ghost">
           MCP docs
         </Link>

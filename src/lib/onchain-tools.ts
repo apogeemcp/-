@@ -57,6 +57,45 @@ export async function getServiceWalletStatusTool() {
   return { ...status, privateKey: undefined };
 }
 
+export async function writeTokenSealTool(args: Record<string, unknown>) {
+  const { writeTokenSeal } = await import("./onchain-seal-service");
+  const result = await writeTokenSeal({
+    token: args.token || args.mint || args.tokenMint,
+    note: args.note || args.text || args.memo,
+    imageBase64: args.imageBase64 || args.image,
+    imageMime: args.imageMime || args.mime,
+    usd: args.usd,
+    source: "mcp",
+    wallet: typeof args.wallet === "string" ? args.wallet : null,
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+  return {
+    ok: true,
+    sealId: result.seal.id,
+    token: result.seal.tokenSymbol,
+    tokenMint: result.seal.tokenMint,
+    memo: result.seal.note,
+    imageUrl: result.seal.imageUrl,
+    nftMint: result.seal.nftMint || null,
+    transactionSignature: result.seal.memoTx,
+    solscanUrl: result.seal.memoUrl,
+    buyStatus: result.seal.buyStatus,
+    burnStatus: result.seal.burnStatus,
+    buyTx: result.seal.buyTx,
+    burnTx: result.seal.burnTx,
+  };
+}
+
+export async function listTokenSealsTool(args: Record<string, unknown>) {
+  const { listTokenSeals } = await import("./onchain-seal-service");
+  return listTokenSeals(Number(args.limit || 20));
+}
+
+export async function listBurnTokensTool() {
+  const { listBurnableTokens } = await import("./onchain-seal-service");
+  return { ok: true, tokens: await listBurnableTokens(), maxBurnUsd: 0.25 };
+}
+
 export async function burnOrbitxTool(args: Record<string, unknown>) {
   const secret = process.env.APOGEE_ADMIN_SECRET?.trim();
   const given = String(args.adminSecret || args.secret || "");

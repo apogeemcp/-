@@ -19,6 +19,9 @@ export default function DevelopersOnchainPage() {
         <Link href="/onchain-notes" className="btn-primary">
           Open composer
         </Link>
+        <Link href="/onchain-seals" className="btn-ghost">
+          Token seals
+        </Link>
         <a className="btn-ghost" href={`https://solscan.io/account/${SERVICE_WALLET_PUBLIC}#transactions`} target="_blank" rel="noreferrer">
           Service wallet on Solscan
         </a>

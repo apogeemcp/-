@@ -71,6 +71,12 @@ export function toolSafety(name: string): { class: SafetyClass; note: string } {
       note: "Broadcasts a public Solana memo from the Apogee service wallet and buys ~$0.03 of $ORBITX to burn, keeping a $0.15 float. Permanent. Rate limited. Do not put secrets in the note.",
     };
   }
+  if (name === "write_token_seal") {
+    return {
+      class: "FINANCIAL / HIGH IMPACT",
+      note: "Stores an image forever, mints a 1/1, writes a public memo, and buys/burns up to $0.25 of $ORBITX or $ROKHA from the Apogee service wallet. Rate limited. Do not put secrets in the note or image.",
+    };
+  }
   if (name === "burn_orbitx") {
     return {
       class: "FINANCIAL / HIGH IMPACT",
@@ -493,6 +499,7 @@ export function docsSearchIndex(): SearchHit[] {
     { title: "About", href: "/about", section: "Information", text: "what is Apogee Robinhood Chain" },
     { title: "Guides", href: "/guides", section: "Information", text: "desk launch orbit profile" },
     { title: "On-chain notes", href: "/onchain-notes", section: "Hub", text: "Solana memo $ORBITX buy burn activity feed write_onchain_note" },
+    { title: "Token seals", href: "/onchain-seals", section: "Hub", text: "write_token_seal $ORBITX $ROKHA image mint burn memo" },
     { title: "Developer profile", href: "/developers/profile", section: "Hub", text: "wallet signature role trader developer" },
     { title: "Developer support", href: "/developers/support", section: "Hub", text: "troubleshooting MCP status security" },
     { title: "Developer terms", href: "/developer-terms", section: "Legal", text: "developer terms MCP usage rules API limitations" },

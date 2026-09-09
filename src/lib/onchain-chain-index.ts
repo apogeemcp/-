@@ -7,6 +7,7 @@ export type RawServiceTx = {
   blockTime: string | null;
   memo: string | null;
   orbitxDelta: number;
+  mintDeltas?: Record<string, number>;
   solDelta: number;
 };
 

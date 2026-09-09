@@ -26,6 +26,8 @@ import {
   orbitxBuyUsd,
   scanUrl,
   solanaRpc,
+  tokenBurnUi,
+  tokenBuyUsd,
 } from "./onchain-config";
 import { extractMemoFromParsedParts } from "./onchain-memo";
 import { loadServiceKeypair, servicePublicAddress } from "./orbitx-signer";
@@ -66,6 +68,20 @@ export async function serviceBalances(): Promise<{ sol: number; orbitx: number; 
   return { sol, orbitx, wallet };
 }
 
+export async function getMintBalanceUi(mintAddress: string): Promise<number> {
+  const wallet = servicePublicAddress();
+  const conn = connection();
+  try {
+    const mint = new PublicKey(mintAddress);
+    const program = await tokenProgramForMint(conn, mint);
+    const ata = getAssociatedTokenAddressSync(mint, new PublicKey(wallet), false, program);
+    const bal = await conn.getTokenAccountBalance(ata, "confirmed").catch(() => null);
+    return Number(bal?.value.uiAmount || 0);
+  } catch {
+    return 0;
+  }
+}
+
 async function tokenProgramForMint(conn: Connection, mint: PublicKey) {
   const info = await conn.getAccountInfo(mint, "confirmed");
   if (info?.owner.equals(TOKEN_2022_PROGRAM_ID)) return TOKEN_2022_PROGRAM_ID;
@@ -94,8 +110,7 @@ export async function sendMemo(memoText: string): Promise<ConfirmedTx> {
   };
 }
 
-export async function orbitxMarketPrice(): Promise<{ priceUsd: number; source: string } | null> {
-  const mint = ORBITX_MINT;
+export async function tokenMarketPrice(mint: string): Promise<{ priceUsd: number; source: string } | null> {
   const dex = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`, {
     headers: { accept: "application/json" },
     signal: AbortSignal.timeout(10_000),
@@ -118,6 +133,10 @@ export async function orbitxMarketPrice(): Promise<{ priceUsd: number; source: s
   const jupPrice = Number(jup?.[mint]?.usdPrice ?? jup?.data?.[mint]?.price ?? jup?.[mint]?.price);
   if (Number.isFinite(jupPrice) && jupPrice > 0) return { priceUsd: jupPrice, source: "jupiter" };
   return null;
+}
+
+export async function orbitxMarketPrice(): Promise<{ priceUsd: number; source: string } | null> {
+  return tokenMarketPrice(ORBITX_MINT);
 }
 
 async function solPriceUsd(): Promise<number | null> {
@@ -188,11 +207,14 @@ export async function sizeNoteBurn(): Promise<{
   };
 }
 
-async function jupiterSwap(lamports: number): Promise<{ signature: string; outAmountRaw: string; outUi: number }> {
+async function jupiterSwap(
+  lamports: number,
+  outputMint = ORBITX_MINT,
+): Promise<{ signature: string; outAmountRaw: string; outUi: number }> {
   const payer = loadServiceKeypair();
   const quoteUrls = [
-    `https://lite-api.jup.ag/swap/v1/quote?inputMint=${WSOL_MINT}&outputMint=${ORBITX_MINT}&amount=${lamports}&slippageBps=150&restrictIntermediateTokens=true`,
-    `https://quote-api.jup.ag/v6/quote?inputMint=${WSOL_MINT}&outputMint=${ORBITX_MINT}&amount=${lamports}&slippageBps=150`,
+    `https://lite-api.jup.ag/swap/v1/quote?inputMint=${WSOL_MINT}&outputMint=${outputMint}&amount=${lamports}&slippageBps=150&restrictIntermediateTokens=true`,
+    `https://quote-api.jup.ag/v6/quote?inputMint=${WSOL_MINT}&outputMint=${outputMint}&amount=${lamports}&slippageBps=150`,
   ];
   let quote: Record<string, unknown> | null = null;
   for (const url of quoteUrls) {
@@ -205,7 +227,7 @@ async function jupiterSwap(lamports: number): Promise<{ signature: string; outAm
     }
   }
   if (!quote || !quote.outAmount) {
-    throw new Error("Jupiter has no SOL → $ORBITX route for this size. Buy not executed.");
+    throw new Error("Jupiter has no SOL → token route for this size. Buy not executed.");
   }
   const swapUrls = ["https://lite-api.jup.ag/swap/v1/swap", "https://quote-api.jup.ag/v6/swap"];
   let swapTx: string | null = null;
@@ -242,20 +264,54 @@ async function jupiterSwap(lamports: number): Promise<{ signature: string; outAm
     tx.partialSign(payer);
     signature = await sendAndConfirmTransaction(conn, tx, [payer], { commitment: "confirmed", maxRetries: 3 });
   }
-  const mint = await getMint(conn, new PublicKey(ORBITX_MINT), "confirmed", await tokenProgramForMint(conn, new PublicKey(ORBITX_MINT)));
+  const mint = await getMint(conn, new PublicKey(outputMint), "confirmed", await tokenProgramForMint(conn, new PublicKey(outputMint)));
   const outRaw = String(quote.outAmount);
   const outUi = Number(outRaw) / 10 ** mint.decimals;
   return { signature, outAmountRaw: outRaw, outUi };
 }
 
-async function waitForOrbitxIncrease(beforeUi: number, quotedUi: number): Promise<number> {
+export async function buyTokenForUsd(input: {
+  mint: string;
+  burnUsd: number;
+  reserveUsd: number;
+}): Promise<{
+  tx: ConfirmedTx;
+  tokenAmount: number;
+  usdValue: number;
+  solSpent: number;
+  priceUsd: number;
+}> {
+  const [held, sol, token, solUsd] = await Promise.all([
+    getMintBalanceUi(input.mint),
+    serviceBalances().then((b) => b.sol),
+    tokenMarketPrice(input.mint),
+    solPriceUsd(),
+  ]);
+  if (!token) throw new Error("No executable market price is available for this token.");
+  if (!solUsd) throw new Error("Could not read SOL/USD for sizing the buy.");
+  const heldUsd = Math.max(0, held) * token.priceUsd;
+  const usd = tokenBuyUsd(heldUsd, input.burnUsd, input.reserveUsd);
+  const solAmount = usd / solUsd;
+  const solLamports = Math.max(5_000, Math.ceil(solAmount * LAMPORTS_PER_SOL * 1.01));
+  if (sol < solAmount + 0.002) {
+    throw new Error(`Service wallet does not have enough SOL to buy $${usd.toFixed(2)} of this token.`);
+  }
+  const swap = await jupiterSwap(solLamports, input.mint);
+  let after = held;
   for (let i = 0; i < 6; i++) {
-    const now = (await serviceBalances()).orbitx;
-    if (now > beforeUi) return now;
+    after = await getMintBalanceUi(input.mint);
+    if (after > held) break;
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  const last = (await serviceBalances()).orbitx;
-  return last > beforeUi ? last : beforeUi + Math.max(0, quotedUi);
+  if (after <= held) after = held + Math.max(0, swap.outUi);
+  const burnUi = tokenBurnUi(after, token.priceUsd, input.burnUsd, input.reserveUsd);
+  return {
+    tx: { signature: swap.signature, slot: null, blockTime: new Date().toISOString(), explorerUrl: scanUrl(swap.signature) },
+    tokenAmount: burnUi,
+    usdValue: input.burnUsd,
+    solSpent: solLamports / LAMPORTS_PER_SOL,
+    priceUsd: token.priceUsd,
+  };
 }
 
 export async function buyOrbitxForNote(): Promise<{
@@ -265,60 +321,53 @@ export async function buyOrbitxForNote(): Promise<{
   solSpent: number;
   priceUsd: number;
 }> {
-  const balances = await serviceBalances();
-  const size = await sizeNoteBuy(balances.orbitx);
-  if (balances.sol < size.solAmount + 0.002) {
-    throw new Error(`Service wallet does not have enough SOL to buy $${size.usd.toFixed(2)} of $ORBITX.`);
-  }
-  const swap = await jupiterSwap(size.solLamports);
-  const after = await waitForOrbitxIncrease(balances.orbitx, swap.outUi);
-  const burnUi = orbitxBurnUi(after, size.priceUsd);
-  return {
-    tx: { signature: swap.signature, slot: null, blockTime: new Date().toISOString(), explorerUrl: scanUrl(swap.signature) },
-    tokenAmount: burnUi,
-    usdValue: NOTE_BURN_USD,
-    solSpent: size.solAmount,
-    priceUsd: size.priceUsd,
-  };
+  return buyTokenForUsd({ mint: ORBITX_MINT, burnUsd: NOTE_BURN_USD, reserveUsd: ORBITX_RESERVE_USD });
 }
 
-export async function burnOrbitx(amountUi?: number): Promise<{ tx: ConfirmedTx; tokenAmount: number }> {
+export async function burnToken(
+  mintAddress: string,
+  amountUi?: number,
+  reserveUsd = ORBITX_RESERVE_USD,
+  burnUsd = NOTE_BURN_USD,
+): Promise<{ tx: ConfirmedTx; tokenAmount: number }> {
   const payer = loadServiceKeypair();
   const conn = connection();
-  const mint = new PublicKey(ORBITX_MINT);
+  const mint = new PublicKey(mintAddress);
   const program = await tokenProgramForMint(conn, mint);
   const mintInfo = await getMint(conn, mint, "confirmed", program);
   const ata = getAssociatedTokenAddressSync(mint, payer.publicKey, false, program);
   const bal = await conn.getTokenAccountBalance(ata, "confirmed");
   const have = BigInt(bal.value.amount);
-  if (have <= 1n) throw new Error("Service wallet holds no spare $ORBITX to burn.");
-  const price = (await orbitxMarketPrice())?.priceUsd ?? 0;
+  if (have <= 1n) throw new Error("Service wallet holds no spare tokens to burn.");
+  const price = (await tokenMarketPrice(mintAddress))?.priceUsd ?? 0;
   const heldUi = Number(bal.value.uiAmount || 0);
-  const reserveUi = price > 0 ? ORBITX_RESERVE_USD / price : 0;
-  const reserveRaw =
-    price > 0 ? BigInt(Math.ceil(reserveUi * 10 ** mintInfo.decimals)) : 1n;
+  const reserveUi = price > 0 ? reserveUsd / price : 0;
+  const reserveRaw = price > 0 ? BigInt(Math.ceil(reserveUi * 10 ** mintInfo.decimals)) : 1n;
   const minKeep = reserveRaw > 1n ? reserveRaw : 1n;
   const maxBurn = have > minKeep ? have - minKeep : 0n;
   if (maxBurn <= 0n) {
-    throw new Error("Keeping the $0.15 $ORBITX float so the token account stays open.");
+    throw new Error("Keeping the token float so the account stays open.");
   }
   let burnAmount = 0n;
   const wantedUi =
     amountUi != null && Number.isFinite(amountUi) && amountUi > 0
       ? amountUi
-      : orbitxBurnUi(heldUi, price);
+      : tokenBurnUi(heldUi, price, burnUsd, reserveUsd);
   const wanted = BigInt(Math.floor(wantedUi * 10 ** mintInfo.decimals));
   if (wanted > 0n) burnAmount = wanted < maxBurn ? wanted : maxBurn;
   if (burnAmount <= 0n) {
-    throw new Error("Keeping the $0.15 $ORBITX float; nothing extra to burn.");
+    throw new Error("Keeping the token float; nothing extra to burn.");
   }
-  // Never close the ATA — the $0.15 float stays so later swaps skip rent.
   const tx = new Transaction().add(createBurnInstruction(ata, mint, payer.publicKey, burnAmount, [], program));
   const signature = await sendAndConfirmTransaction(conn, tx, [payer], { commitment: "confirmed", maxRetries: 3 });
   return {
     tx: { signature, slot: null, blockTime: new Date().toISOString(), explorerUrl: scanUrl(signature) },
     tokenAmount: Number(burnAmount) / 10 ** mintInfo.decimals,
   };
+}
+
+export async function burnOrbitx(amountUi?: number): Promise<{ tx: ConfirmedTx; tokenAmount: number }> {
+  return burnToken(ORBITX_MINT, amountUi, ORBITX_RESERVE_USD, NOTE_BURN_USD);
 }
 
 export async function readMemoFromSignature(signature: string): Promise<{
@@ -346,6 +395,7 @@ export type RawServiceTx = {
   blockTime: string | null;
   memo: string | null;
   orbitxDelta: number;
+  mintDeltas?: Record<string, number>;
   solDelta: number;
 };
 
@@ -363,14 +413,24 @@ function memoFromParsed(parsed: ParsedTransactionWithMeta): string | null {
   });
 }
 
+function mintDeltasForWallet(parsed: ParsedTransactionWithMeta, owner: string): Record<string, number> {
+  const pre: Record<string, number> = {};
+  const post: Record<string, number> = {};
+  for (const b of parsed.meta?.preTokenBalances || []) {
+    if (b.owner === owner && b.mint) pre[b.mint] = Number(b.uiTokenAmount?.uiAmount || 0);
+  }
+  for (const b of parsed.meta?.postTokenBalances || []) {
+    if (b.owner === owner && b.mint) post[b.mint] = Number(b.uiTokenAmount?.uiAmount || 0);
+  }
+  const out: Record<string, number> = {};
+  for (const mint of new Set([...Object.keys(pre), ...Object.keys(post)])) {
+    out[mint] = (post[mint] || 0) - (pre[mint] || 0);
+  }
+  return out;
+}
+
 function orbitxDeltaForWallet(parsed: ParsedTransactionWithMeta, owner: string): number {
-  const sum = (
-    rows: { mint: string; owner?: string; uiTokenAmount?: { uiAmount?: number | null } }[] | null | undefined,
-  ) =>
-    (rows || [])
-      .filter((b) => b.mint === ORBITX_MINT && b.owner === owner)
-      .reduce((s, b) => s + Number(b.uiTokenAmount?.uiAmount || 0), 0);
-  return sum(parsed.meta?.postTokenBalances) - sum(parsed.meta?.preTokenBalances);
+  return mintDeltasForWallet(parsed, owner)[ORBITX_MINT] || 0;
 }
 
 function solDeltaForWallet(parsed: ParsedTransactionWithMeta, owner: string): number {
@@ -408,7 +468,15 @@ export async function fetchServiceRawTxs(limit = 48): Promise<{ txs: RawServiceT
       const parsed = txs[j];
       const blockTime = info.blockTime ? new Date(info.blockTime * 1000).toISOString() : null;
       if (!parsed) {
-        out.push({ signature: info.signature, slot: info.slot, blockTime, memo: null, orbitxDelta: 0, solDelta: 0 });
+        out.push({
+          signature: info.signature,
+          slot: info.slot,
+          blockTime,
+          memo: null,
+          orbitxDelta: 0,
+          mintDeltas: {},
+          solDelta: 0,
+        });
         continue;
       }
       fetched += 1;
@@ -418,6 +486,7 @@ export async function fetchServiceRawTxs(limit = 48): Promise<{ txs: RawServiceT
         blockTime: parsed.blockTime ? new Date(parsed.blockTime * 1000).toISOString() : blockTime,
         memo: memoFromParsed(parsed),
         orbitxDelta: orbitxDeltaForWallet(parsed, owner),
+        mintDeltas: mintDeltasForWallet(parsed, owner),
         solDelta: solDeltaForWallet(parsed, owner),
       });
     }

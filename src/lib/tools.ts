@@ -454,6 +454,36 @@ export const TOOLS: ToolDef[] = [
     inputSchema: { type: "object", properties: {} },
   },
   {
+    name: "write_token_seal",
+    description:
+      "Pick a supported Solana token ($ORBITX or $ROKHA), write a public memo, permanently store an image (Irys/Arweave + 1/1 mint), then buy and burn up to $0.25 of that token from the Apogee service wallet. Public and irreversible. Rate limited. Never send secrets. imageBase64 required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        token: { type: "string", description: "Token id, symbol, or mint. Supported: $ORBITX, $ROKHA." },
+        note: { type: "string", description: "UTF-8 memo, max 180 characters. Permanent and public." },
+        imageBase64: { type: "string", description: "JPEG/PNG/WebP as raw or data-URL base64." },
+        imageMime: { type: "string", description: "image/jpeg, image/png, or image/webp." },
+        usd: { type: "number", description: "Burn size in USD, max 0.25." },
+        wallet: { type: "string", description: "Optional attribution address." },
+      },
+      required: ["token", "note", "imageBase64"],
+    },
+  },
+  {
+    name: "list_token_seals",
+    description: "List confirmed Apogee token seals (memo + permanent image + buy/burn) from the service wallet.",
+    inputSchema: {
+      type: "object",
+      properties: { limit: { type: "number" } },
+    },
+  },
+  {
+    name: "list_burn_tokens",
+    description: "Supported tokens the service wallet can buy and burn on a token seal. Currently $ORBITX and $ROKHA, max $0.25 each.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
     name: "burn_orbitx",
     description: "Admin-only: burn $ORBITX held by the service wallet. Requires adminSecret. Not a generic transaction signer.",
     inputSchema: {
@@ -475,6 +505,7 @@ Rules:
 - Wallet tracking (track_wallet, get_wallet_pnl, get_wallet_txs) is read-only.
 - prepare_pons_launch returns an unsigned tx for the user to sign in Phantom (ethereum provider) after wallet_addEthereumChain for 4663. Do not claim a launch or swap executed unless the user reports a tx hash.
 - On-chain notes: write_onchain_note records a public Solana memo via the Apogee service wallet and buys ~$0.03 of $ORBITX to burn, keeping a $0.15 float. Notes are permanent. Never put secrets or personal data in a memo. Repeat idempotencyKey to avoid duplicates. burn_orbitx is admin-only.
+- Token seals: write_token_seal lets a user pick $ORBITX or $ROKHA, attach an image (base64), and write a memo. The service wallet stores the image forever, mints a 1/1, then buys and burns up to $0.25 of that token. Public and irreversible.
 - Stock Tokens may not be offered to US/Canada/UK/Switzerland persons.
 - Prefer scan_token before size, get_desk for a market snapshot, list_launches / list_pons_launches for new tokens, track_wallet for an address.
 pons (write the name in lowercase; link https://www.ponsfamily.com/launchpad):

@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: { unoptimized: true },
   eslint: { ignoreDuringBuilds: true },
-  serverExternalPackages: ["pg"],
+  serverExternalPackages: ["pg", "@irys/upload", "@irys/upload-solana"],
   async headers() {
     return [
       {

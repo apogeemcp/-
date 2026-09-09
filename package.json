@@ -12,9 +12,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@irys/upload": "^0.0.15",
+    "@irys/upload-solana": "^0.1.8",
     "@react-three/drei": "^10.7.4",
     "@react-three/fiber": "^9.3.0",
     "@solana/spl-token": "^0.4.13",
+    "@solana/spl-token-metadata": "^0.1.6",
     "@solana/web3.js": "^1.98.4",
     "next": "^15.5.2",
     "pg": "^8.23.0",

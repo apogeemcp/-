@@ -29,6 +29,9 @@ import {
   getServiceWalletStatusTool,
   listOnchainNotesTool,
   writeOnchainNoteTool,
+  writeTokenSealTool,
+  listTokenSealsTool,
+  listBurnTokensTool,
 } from "./onchain-tools";
 import { CATALOG_SIZE } from "./catalog";
 import { mcpHttpUrl } from "./site";
@@ -740,6 +743,9 @@ export const toolImpl = {
   add_robinhood_chain: async () => ({ ok: true, method: "wallet_addEthereumChain", params: [addRobinhoodChainParams] }),
   get_mcp_info: () => getMcpInfo(),
   write_onchain_note: (args: Record<string, unknown>) => writeOnchainNoteTool(args),
+  write_token_seal: (args: Record<string, unknown>) => writeTokenSealTool(args),
+  list_token_seals: (args: Record<string, unknown>) => listTokenSealsTool(args),
+  list_burn_tokens: () => listBurnTokensTool(),
   get_onchain_note: (args: Record<string, unknown>) => getOnchainNoteTool(args),
   list_onchain_notes: (args: Record<string, unknown>) => listOnchainNotesTool(args),
   get_onchain_activity: (args: Record<string, unknown>) => getOnchainActivityTool(args),

@@ -159,6 +159,7 @@ export const TABS = [
 
 export const MORE_LINKS = [
   { href: "/onchain-notes", label: "On-chain notes" },
+  { href: "/onchain-seals", label: "Token seals" },
   { href: "/developers", label: "Developers" },
   { href: "/connect", label: "Connect MCP" },
   { href: "/analytics", label: "Analytics" },
@@ -193,6 +194,7 @@ export const FOOTER = {
   ],
   resources: [
     { href: "/onchain-notes", label: "On-chain notes" },
+    { href: "/onchain-seals", label: "Token seals" },
     { href: "/developers", label: "Developers" },
     { href: "/developers/access", label: "MCP access" },
     { href: "/developers/partners", label: "Partners" },

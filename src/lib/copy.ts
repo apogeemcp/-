@@ -152,6 +152,10 @@ export const FAQ = [
         a: "write_onchain_note records a public Solana memo from the Apogee service wallet, then buys and burns about $0.03 of $ORBITX (keeping a $0.15 float so the token account stays rented). The feed on /onchain-notes shows confirmed signatures only. Do not put secrets in a memo.",
       },
       {
+        q: "What are token seals?",
+        a: "write_token_seal on /onchain-seals lets you pick $ORBITX or $ROKHA, write a memo, and attach an image. The service wallet stores the image forever, mints a 1/1, then buys and burns up to $0.25 of that token. Do not put secrets in the memo or image.",
+      },
+      {
         q: "Can I embed Apogee in my own product?",
         a: "Yes. Connect https://apogeemcp.digital/api/mcp or REST /api/v1. Partnership conversations: /developers/partners. That form does not sell access.",
       },
