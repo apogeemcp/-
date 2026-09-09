@@ -40,11 +40,7 @@ function parseSecret(raw: string): Uint8Array {
 let cached: Keypair | null = null;
 
 export function servicePublicAddress(): string {
-  try {
-    return loadServiceKeypair().publicKey.toBase58();
-  } catch {
-    return SERVICE_WALLET_PUBLIC;
-  }
+  return SERVICE_WALLET_PUBLIC;
 }
 
 export function loadServiceKeypair(): Keypair {

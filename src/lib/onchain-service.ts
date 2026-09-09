@@ -1,9 +1,7 @@
 import { randomUUID } from "crypto";
 import { consumeNamedLimit } from "./ratelimit";
-import { ORBITX_MINT, NOTE_BURN_USD, scanUrl } from "./onchain-config";
+import { ORBITX_MINT, NOTE_BURN_USD, SERVICE_WALLET_PUBLIC, scanUrl } from "./onchain-config";
 import { buildMemoText, isIdempotencyKey, sanitizeNote } from "./onchain-memo";
-import { burnOrbitx, buyOrbitxForNote, orbitxMarketPrice, readMemoFromSignature, sendMemo, serviceBalances, sizeNoteBurn } from "./orbitx-chain";
-import { servicePublicAddress, serviceWalletReady } from "./orbitx-signer";
 import {
   activityStats,
   dailySpend,
@@ -21,6 +19,18 @@ import {
   type NoteRow,
 } from "./onchain-store";
 import { supabaseAdmin } from "./supabase-admin";
+
+function servicePublicAddress() {
+  return SERVICE_WALLET_PUBLIC;
+}
+
+async function loadSigner() {
+  return import("./orbitx-signer");
+}
+
+async function loadChain() {
+  return import("./orbitx-chain");
+}
 
 export type WriteNoteInput = {
   note: unknown;
@@ -64,6 +74,7 @@ export async function writeOnchainNote(input: WriteNoteInput) {
   if (!supabaseAdmin()) {
     return { ok: false as const, status: 503, error: "Notes cannot be stored (missing service role)." };
   }
+  const { serviceWalletReady } = await loadSigner();
   if (!serviceWalletReady()) {
     return { ok: false as const, status: 503, error: "Service wallet is not configured. Notes are not signing." };
   }
@@ -104,6 +115,7 @@ export async function writeOnchainNote(input: WriteNoteInput) {
   }
 
   try {
+    const { sendMemo } = await loadChain();
     const memo = await sendMemo(note.memo_text);
     const patched = await patchNote(note.id, {
       memo_status: "confirmed",
@@ -155,6 +167,7 @@ export async function resumeNote(id: string) {
     } else {
       await patchNote(id, { buy_status: "pending", error: null });
       try {
+        const { buyOrbitxForNote } = await loadChain();
         const buy = await buyOrbitxForNote();
         await patchNote(id, {
           buy_status: "confirmed",
@@ -192,6 +205,7 @@ export async function resumeNote(id: string) {
 
   await patchNote(id, { burn_status: "pending" });
   try {
+    const { burnOrbitx } = await loadChain();
     const burn = await burnOrbitx(Number(current.token_amount || 0) || undefined);
     await patchNote(id, {
       burn_status: "confirmed",
@@ -230,6 +244,7 @@ export async function recoverPending(limit = 6) {
 
 export async function getNoteBySignature(signature: string) {
   const local = await findNoteByMemoTx(signature);
+  const { readMemoFromSignature } = await loadChain();
   const chain = await readMemoFromSignature(signature);
   return { local: local ? notePublic(local) : null, chain };
 }
@@ -267,29 +282,16 @@ export async function notesIndex(input: { wallet?: string; search?: string; limi
 
 export async function walletStatus() {
   const flags = await effectiveFlags();
-  const [balances, stats, spend, price] = await Promise.all([
-    serviceWalletReady()
-      ? serviceBalances().catch(() => ({ sol: 0, orbitx: 0, wallet: servicePublicAddress() }))
-      : Promise.resolve({ sol: 0, orbitx: 0, wallet: servicePublicAddress() }),
-    activityStats(),
-    dailySpend(),
-    orbitxMarketPrice().catch(() => null),
-  ]);
-  let fee: number | null = null;
-  try {
-    const sized = await sizeNoteBurn().catch(() => null);
-    fee = sized?.solAmount ?? null;
-  } catch {
-    fee = null;
-  }
-  return {
-    ok: true,
-    wallet: balances.wallet,
-    sol: balances.sol,
-    orbitx: balances.orbitx,
+  const stats = await activityStats();
+  const spend = await dailySpend();
+  const fallback = {
+    ok: true as const,
+    wallet: servicePublicAddress(),
+    sol: 0,
+    orbitx: 0,
     mint: ORBITX_MINT,
     network: "solana-mainnet",
-    ready: serviceWalletReady(),
+    ready: false,
     notesEnabled: flags.notesEnabled,
     autoBurnEnabled: flags.autoBurnEnabled,
     noteBurnUsd: NOTE_BURN_USD,
@@ -297,17 +299,43 @@ export async function walletStatus() {
     maxDailySolSpend: flags.maxDailySolSpend,
     spentTodayUsd: spend.burnUsd,
     spentTodaySol: spend.sol,
-    marketPriceUsd: price?.priceUsd ?? null,
-    estimatedSolForNote: fee,
+    marketPriceUsd: null as number | null,
+    estimatedSolForNote: null as number | null,
     stats,
-    scanWallet: `https://solscan.io/account/${balances.wallet}`,
+    scanWallet: `https://solscan.io/account/${servicePublicAddress()}`,
   };
+  try {
+    const { serviceWalletReady } = await loadSigner();
+    const chain = await loadChain();
+    const ready = serviceWalletReady();
+    const [balances, price, sized] = await Promise.all([
+      ready
+        ? chain.serviceBalances().catch(() => ({ sol: 0, orbitx: 0, wallet: servicePublicAddress() }))
+        : Promise.resolve({ sol: 0, orbitx: 0, wallet: servicePublicAddress() }),
+      chain.orbitxMarketPrice().catch(() => null),
+      chain.sizeNoteBurn().catch(() => null),
+    ]);
+    return {
+      ...fallback,
+      wallet: balances.wallet,
+      sol: balances.sol,
+      orbitx: balances.orbitx,
+      ready,
+      marketPriceUsd: price?.priceUsd ?? null,
+      estimatedSolForNote: sized?.solAmount ?? null,
+      scanWallet: `https://solscan.io/account/${balances.wallet}`,
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 export async function adminBurnOrbitx(amountUi?: number) {
+  const { serviceWalletReady } = await loadSigner();
   if (!serviceWalletReady()) return { ok: false as const, error: "Service wallet is not configured." };
   const flags = await effectiveFlags();
   if (!flags.autoBurnEnabled) return { ok: false as const, error: "Auto-burn is paused." };
+  const { burnOrbitx } = await loadChain();
   const burn = await burnOrbitx(amountUi);
   await insertActivity({
     event_type: "ORBITX_BURN",

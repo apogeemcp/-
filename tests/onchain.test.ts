@@ -73,4 +73,11 @@ describe("on-chain notes", () => {
     expect(walletTool?.inputSchema).toEqual({ type: "object", properties: {} });
     expect(walletTool?.description).toMatch(/Never returns private keys/);
   });
+
+  it("serves the public feed without loading the Solana signer", async () => {
+    const { publicFeed } = await import("../src/lib/onchain-service");
+    const feed = await publicFeed({ type: "ALL", limit: 5 });
+    expect(feed.ok).toBe(true);
+    expect(Array.isArray(feed.items)).toBe(true);
+  });
 });
