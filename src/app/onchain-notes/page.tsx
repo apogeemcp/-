@@ -3,6 +3,7 @@ import { OnchainComposer } from "@/components/OnchainComposer";
 import { OnchainActivityFeed } from "@/components/OnchainActivityFeed";
 import { GuidePanel } from "@/components/InfoBits";
 import { GUIDES } from "@/lib/copy";
+import { SERVICE_WALLET_PUBLIC } from "@/lib/onchain-config";
 
 export const metadata = {
   title: "On-chain notes",
