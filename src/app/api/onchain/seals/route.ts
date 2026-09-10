@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   try {
     const [tokens, seals, wallet] = await Promise.all([
       listBurnableTokens(),
-      listTokenSeals(Number(req.nextUrl.searchParams.get("limit") || 24)),
+      listTokenSeals(Number(req.nextUrl.searchParams.get("limit") || 50)),
       walletStatus().catch(() => null),
     ]);
     return NextResponse.json(
@@ -31,6 +31,10 @@ export async function GET(req: NextRequest) {
         autoBurnEnabled: wallet?.autoBurnEnabled ?? true,
         sol: wallet?.sol ?? null,
         sealBurnUsd: SEAL_BURN_USD,
+        editionCap: seals.editionCap,
+        minted: seals.minted,
+        remaining: seals.remaining,
+        soldOut: seals.soldOut,
         tokens,
         items: seals.items,
       },

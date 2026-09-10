@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { Providers } from "@/components/Providers";
 import { SkipToContent } from "@/components/SkipToContent";
 import { SpaceLayer } from "@/components/SpaceLayer";
+import { WelcomeGate } from "@/components/WelcomeGate";
 import { ASSET_V, PRODUCT, publicSiteUrl } from "@/lib/site";
 
 const display = Cinzel({ subsets: ["latin"], variable: "--font-display", weight: ["400", "500", "600", "700"] });
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SkipToContent />
           <SpaceLayer />
           <Nav />
+          <WelcomeGate />
           <div id="main-content">{children}</div>
           <Footer />
         </Providers>

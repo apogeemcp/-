@@ -74,7 +74,7 @@ export function toolSafety(name: string): { class: SafetyClass; note: string } {
   if (name === "write_token_seal") {
     return {
       class: "FINANCIAL / HIGH IMPACT",
-      note: "Stores an image forever, mints a 1/1, writes a public memo, and buys/burns up to $0.25 of $ORBITX or $ROKHA from the Apogee service wallet. Rate limited. Do not put secrets in the note or image.",
+      note: "Stores an image forever, mints a 1/1, writes a public memo, and buys/burns up to $0.25 of $ORBITX or $ROKHA. Limited to 50 Saturn cards total. Rate limited. Do not put secrets in the note or image.",
     };
   }
   if (name === "burn_orbitx") {

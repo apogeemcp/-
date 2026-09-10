@@ -11,6 +11,8 @@ export const NOTE_BURN_USD = 0.03;
 export const ORBITX_RESERVE_USD = 0.15;
 /** Max USD the service wallet spends buying a supported token to burn on a seal. */
 export const SEAL_BURN_USD = 0.25;
+/** Closed set: only this many token seals will ever be minted. */
+export const SEAL_EDITION_CAP = 50;
 /** Small per-mint float so seal burns do not close the ATA. */
 export const SEAL_RESERVE_USD = 0.05;
 export const SEAL_PREFIX = "APOGEE_SEAL:v1:";

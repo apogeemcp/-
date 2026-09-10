@@ -456,7 +456,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "write_token_seal",
     description:
-      "Pick a supported Solana token ($ORBITX or $ROKHA), write a public memo, permanently store an image (Irys/Arweave + 1/1 mint), then buy and burn up to $0.25 of that token from the Apogee service wallet. Public and irreversible. Rate limited. Never send secrets. imageBase64 required.",
+      "Pick $ORBITX or $ROKHA, write a public memo, store an image forever, mint a 1/1, then buy/burn up to $0.25. Limited edition of 50 Saturn cards — after 50, writes are closed. Public and irreversible. Never send secrets. imageBase64 required.",
     inputSchema: {
       type: "object",
       properties: {
@@ -472,7 +472,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "list_token_seals",
-    description: "List confirmed Apogee token seals (memo + permanent image + buy/burn) from the service wallet.",
+    description: "List the limited-edition Apogee token seals (max 50 Saturn cards) with memo, image, buy/burn, and edition number.",
     inputSchema: {
       type: "object",
       properties: { limit: { type: "number" } },
@@ -505,7 +505,7 @@ Rules:
 - Wallet tracking (track_wallet, get_wallet_pnl, get_wallet_txs) is read-only.
 - prepare_pons_launch returns an unsigned tx for the user to sign in Phantom (ethereum provider) after wallet_addEthereumChain for 4663. Do not claim a launch or swap executed unless the user reports a tx hash.
 - On-chain notes: write_onchain_note records a public Solana memo via the Apogee service wallet and buys ~$0.03 of $ORBITX to burn, keeping a $0.15 float. Notes are permanent. Never put secrets or personal data in a memo. Repeat idempotencyKey to avoid duplicates. burn_orbitx is admin-only.
-- Token seals: write_token_seal lets a user pick $ORBITX or $ROKHA, attach an image (base64), and write a memo. The service wallet stores the image forever, mints a 1/1, then buys and burns up to $0.25 of that token. Public and irreversible.
+- Token seals: write_token_seal lets a user pick $ORBITX or $ROKHA, attach an image (base64), and write a memo. The service wallet stores the image forever, mints a 1/1, then buys and burns up to $0.25 of that token. Only 50 seals will ever exist. Public and irreversible.
 - Stock Tokens may not be offered to US/Canada/UK/Switzerland persons.
 - Prefer scan_token before size, get_desk for a market snapshot, list_launches / list_pons_launches for new tokens, track_wallet for an address.
 pons (write the name in lowercase; link https://www.ponsfamily.com/launchpad):

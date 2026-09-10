@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { SEAL_BURN_USD, SEAL_PREFIX, tokenBuyUsd } from "../src/lib/onchain-config";
+import { SEAL_BURN_USD, SEAL_EDITION_CAP, SEAL_PREFIX, tokenBuyUsd } from "../src/lib/onchain-config";
 import { BURNABLE_TOKENS, resolveBurnableToken } from "../src/lib/onchain-tokens";
 import { buildSealMemo, decodeSealImage, parseSealMemo, sanitizeSealNote } from "../src/lib/onchain-seal";
-import { assembleSealsFromChain } from "../src/lib/onchain-seal-index";
+import { assembleSealsFromChain, sealSetStatus } from "../src/lib/onchain-seal-index";
 import { TOOLS } from "../src/lib/tools";
 
 const TINY_PNG = Buffer.from(
@@ -13,6 +13,7 @@ const TINY_PNG = Buffer.from(
 describe("token seals", () => {
   it("lists $ORBITX and $ROKHA at a $0.25 burn cap", () => {
     expect(SEAL_BURN_USD).toBe(0.25);
+    expect(SEAL_EDITION_CAP).toBe(50);
     expect(BURNABLE_TOKENS.map((t) => t.mint)).toEqual([
       "13H4WJvGEg4xrrBwWn2vsQgz7xhmhxgNdw19i1QsxPX9",
       "2jbdBWTK2MYpuRsmEDJqETU3UMM2nN3WGtete4HUpump",
@@ -86,6 +87,35 @@ describe("token seals", () => {
     expect(out[0].buyTx).toBe("buy");
     expect(out[0].burnTx).toBe("burn");
     expect(out[0].note).toBe("rokha seal");
+    expect(out[0].edition).toBe(1);
+    expect(out[0].editionCap).toBe(50);
+  });
+
+  it("numbers oldest seals first and reports when the 50-card set is closed", () => {
+    const first = buildSealMemo({
+      tokenMint: "13H4WJvGEg4xrrBwWn2vsQgz7xhmhxgNdw19i1QsxPX9",
+      imageId: "one",
+      nftMint: "",
+      sha256: "aa",
+      note: "first",
+    });
+    const second = buildSealMemo({
+      tokenMint: "13H4WJvGEg4xrrBwWn2vsQgz7xhmhxgNdw19i1QsxPX9",
+      imageId: "two",
+      nftMint: "",
+      sha256: "bb",
+      note: "second",
+    });
+    const out = assembleSealsFromChain([
+      { signature: "newer", slot: 2, blockTime: "2026-09-10T00:00:02.000Z", memo: second, orbitxDelta: 0, mintDeltas: {}, solDelta: 0 },
+      { signature: "older", slot: 1, blockTime: "2026-09-10T00:00:01.000Z", memo: first, orbitxDelta: 0, mintDeltas: {}, solDelta: 0 },
+    ]);
+    expect(out.map((s) => [s.note, s.edition])).toEqual([
+      ["second", 2],
+      ["first", 1],
+    ]);
+    expect(sealSetStatus(49).soldOut).toBe(false);
+    expect(sealSetStatus(50)).toEqual({ editionCap: 50, minted: 50, remaining: 0, soldOut: true });
   });
 
   it("registers seal MCP tools", () => {

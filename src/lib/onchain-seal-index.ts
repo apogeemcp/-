@@ -1,4 +1,4 @@
-import { SEAL_BURN_USD, scanUrl } from "./onchain-config";
+import { SEAL_BURN_USD, SEAL_EDITION_CAP, scanUrl } from "./onchain-config";
 import { parseSealMemo, sealImageUrl } from "./onchain-seal";
 import type { RawServiceTx } from "./onchain-chain-index";
 
@@ -13,6 +13,8 @@ export type PublicSeal = {
   imageUrl: string;
   nftMint: string;
   sha256: string;
+  edition: number;
+  editionCap: number;
   memoStatus: "idle" | "pending" | "confirmed" | "failed";
   buyStatus: "idle" | "pending" | "confirmed" | "failed";
   burnStatus: "idle" | "pending" | "confirmed" | "failed";
@@ -55,6 +57,8 @@ export function assembleSealsFromChain(txsNewestFirst: RawServiceTx[]): PublicSe
         imageUrl: sealImageUrl(parsed.seal.imageId),
         nftMint: parsed.seal.nftMint,
         sha256: parsed.seal.sha256,
+        edition: 0,
+        editionCap: SEAL_EDITION_CAP,
         memoStatus: "confirmed",
         buyStatus: "idle",
         burnStatus: "idle",
@@ -92,5 +96,27 @@ export function assembleSealsFromChain(txsNewestFirst: RawServiceTx[]): PublicSe
     }
   }
   flush();
-  return seals.reverse();
+  return numberSealEditions(seals.reverse());
+}
+
+/** Oldest confirmed seal is #1. Newest-first lists keep that serial. */
+export function numberSealEditions(sealsNewestFirst: PublicSeal[], cap = SEAL_EDITION_CAP): PublicSeal[] {
+  const oldestFirst = [...sealsNewestFirst].reverse();
+  return oldestFirst
+    .map((seal, i) => ({
+      ...seal,
+      edition: i + 1,
+      editionCap: cap,
+    }))
+    .reverse();
+}
+
+export function sealSetStatus(minted: number, cap = SEAL_EDITION_CAP) {
+  const count = Math.max(0, minted);
+  return {
+    editionCap: cap,
+    minted: count,
+    remaining: Math.max(0, cap - count),
+    soldOut: count >= cap,
+  };
 }

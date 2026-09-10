@@ -1,7 +1,7 @@
 import { consumeNamedLimit } from "./ratelimit";
-import { SEAL_BURN_USD, SERVICE_WALLET_PUBLIC, scanUrl } from "./onchain-config";
+import { SEAL_BURN_USD, SEAL_EDITION_CAP, SERVICE_WALLET_PUBLIC, scanUrl } from "./onchain-config";
 import { assembleFromChain, spendLast24h } from "./onchain-chain-index";
-import { assembleSealsFromChain, type PublicSeal } from "./onchain-seal-index";
+import { assembleSealsFromChain, sealSetStatus, type PublicSeal } from "./onchain-seal-index";
 import { buildSealMemo, decodeSealImage, sanitizeSealNote } from "./onchain-seal";
 import { BURNABLE_TOKENS, resolveBurnableToken } from "./onchain-tokens";
 import { effectiveFlags } from "./onchain-store";
@@ -17,6 +17,15 @@ export type WriteSealInput = {
   wallet?: string | null;
 };
 
+export type SealCensus = {
+  ok: true;
+  items: PublicSeal[];
+  editionCap: number;
+  minted: number;
+  remaining: number;
+  soldOut: boolean;
+};
+
 function emptySeal(partial: Partial<PublicSeal> & Pick<PublicSeal, "note" | "tokenMint" | "tokenSymbol" | "tokenName">): PublicSeal {
   return {
     id: partial.id || "",
@@ -29,6 +38,8 @@ function emptySeal(partial: Partial<PublicSeal> & Pick<PublicSeal, "note" | "tok
     imageUrl: partial.imageUrl || "",
     nftMint: partial.nftMint || "",
     sha256: partial.sha256 || "",
+    edition: partial.edition || 0,
+    editionCap: partial.editionCap || SEAL_EDITION_CAP,
     memoStatus: partial.memoStatus || "idle",
     buyStatus: partial.buyStatus || "idle",
     burnStatus: partial.burnStatus || "idle",
@@ -48,6 +59,21 @@ function emptySeal(partial: Partial<PublicSeal> & Pick<PublicSeal, "note" | "tok
   };
 }
 
+let censusCache: { at: number; data: SealCensus } | null = null;
+const CENSUS_TTL_MS = 12_000;
+
+export async function censusTokenSeals(force = false): Promise<SealCensus> {
+  if (!force && censusCache && Date.now() - censusCache.at < CENSUS_TTL_MS) {
+    return censusCache.data;
+  }
+  const { fetchServiceRawTxs } = await import("./orbitx-chain");
+  const raw = await fetchServiceRawTxs(Math.min(400, Math.max(80, SEAL_EDITION_CAP * 4)));
+  const items = assembleSealsFromChain(raw.txs);
+  const data: SealCensus = { ok: true, items, ...sealSetStatus(items.length) };
+  censusCache = { at: Date.now(), data };
+  return data;
+}
+
 export async function listBurnableTokens() {
   const { tokenMarketPrice } = await import("./orbitx-chain");
   const priced = await Promise.all(
@@ -59,10 +85,10 @@ export async function listBurnableTokens() {
   return priced;
 }
 
-export async function listTokenSeals(limit = 24): Promise<{ ok: true; items: PublicSeal[] }> {
-  const { fetchServiceRawTxs } = await import("./orbitx-chain");
-  const raw = await fetchServiceRawTxs(Math.min(80, Math.max(16, limit * 3)));
-  return { ok: true, items: assembleSealsFromChain(raw.txs).slice(0, limit) };
+export async function listTokenSeals(limit = 50): Promise<SealCensus> {
+  const census = await censusTokenSeals();
+  const take = Number.isFinite(limit) ? Math.max(1, Math.min(limit, SEAL_EDITION_CAP)) : SEAL_EDITION_CAP;
+  return { ...census, items: census.items.filter((s) => s.edition <= SEAL_EDITION_CAP).slice(0, take) };
 }
 
 export async function writeTokenSeal(input: WriteSealInput) {
@@ -79,6 +105,14 @@ export async function writeTokenSeal(input: WriteSealInput) {
   const flags = await effectiveFlags();
   if (!flags.notesEnabled) {
     return { ok: false as const, status: 503, error: flags.pausedReason || "On-chain seals are paused." };
+  }
+  const census = await censusTokenSeals(true);
+  if (census.soldOut) {
+    return {
+      ok: false as const,
+      status: 403,
+      error: `The Saturn seal set is closed. Only ${SEAL_EDITION_CAP} cards will ever be minted.`,
+    };
   }
   const hourKey = `seal:${input.source}:${(input.wallet || "anon").slice(0, 64)}`;
   const perWallet = consumeNamedLimit(hourKey, input.source === "mcp" ? 4 : 8, 60 * 60_000);
@@ -140,8 +174,11 @@ export async function writeTokenSeal(input: WriteSealInput) {
       memoUrl: memo.explorerUrl,
       nftTx,
       usdValue: usd,
+      edition: census.minted + 1,
+      editionCap: SEAL_EDITION_CAP,
       createdAt: memo.blockTime || new Date().toISOString(),
     });
+    censusCache = null;
 
     if (flags.autoBurnEnabled) {
       try {

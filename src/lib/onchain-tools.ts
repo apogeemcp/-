@@ -72,6 +72,8 @@ export async function writeTokenSealTool(args: Record<string, unknown>) {
   return {
     ok: true,
     sealId: result.seal.id,
+    edition: result.seal.edition,
+    editionCap: result.seal.editionCap,
     token: result.seal.tokenSymbol,
     tokenMint: result.seal.tokenMint,
     memo: result.seal.note,
@@ -88,7 +90,15 @@ export async function writeTokenSealTool(args: Record<string, unknown>) {
 
 export async function listTokenSealsTool(args: Record<string, unknown>) {
   const { listTokenSeals } = await import("./onchain-seal-service");
-  return listTokenSeals(Number(args.limit || 20));
+  const listed = await listTokenSeals(Number(args.limit || 50));
+  return {
+    ok: true,
+    editionCap: listed.editionCap,
+    minted: listed.minted,
+    remaining: listed.remaining,
+    soldOut: listed.soldOut,
+    items: listed.items,
+  };
 }
 
 export async function listBurnTokensTool() {

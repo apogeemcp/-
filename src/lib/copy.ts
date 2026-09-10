@@ -153,7 +153,7 @@ export const FAQ = [
       },
       {
         q: "What are token seals?",
-        a: "write_token_seal on /onchain-seals lets you pick $ORBITX or $ROKHA, write a memo, and attach an image. The service wallet stores the image forever, mints a 1/1, then buys and burns up to $0.25 of that token. Do not put secrets in the memo or image.",
+        a: "write_token_seal on /onchain-seals lets you pick $ORBITX or $ROKHA, write a memo, and attach an image. The service wallet stores the image forever, mints a 1/1, then buys and burns up to $0.25 of that token. Only 50 seals will ever be minted — after that the set is closed. Each seal is a numbered Saturn card. Do not put secrets in the memo or image.",
       },
       {
         q: "Can I embed Apogee in my own product?",

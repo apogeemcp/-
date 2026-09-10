@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { NOTE_MAX_CHARS, ORBITX_RESERVE_USD, SERVICE_WALLET_PUBLIC } from "@/lib/onchain-config";
+import { NOTE_MAX_CHARS, ORBITX_RESERVE_USD } from "@/lib/onchain-config";
 import { readResponseJson } from "@/lib/read-json";
 import { useWallet } from "./WalletProvider";
-import { RawOnchainMemo, SolscanMemoLinks } from "./SolscanMemoLinks";
+import { NoteHoloCard } from "./HoloCard";
 
 type Note = {
   id: string;
@@ -38,13 +38,6 @@ type WalletInfo = {
   sqlReady?: boolean;
   stats?: { totalMemos?: number };
 };
-
-function mark(status: string) {
-  if (status === "confirmed") return "✓";
-  if (status === "pending") return "…";
-  if (status === "failed") return "✕";
-  return "–";
-}
 
 export function OnchainComposer() {
   const { address, verified } = useWallet();
@@ -174,77 +167,22 @@ export function OnchainComposer() {
         {error ? <p className="mt-3 text-sm text-flare">{error}</p> : null}
       </form>
 
-      {last ? <NoteReceipt note={last} /> : null}
+      {last ? (
+        <div className="max-w-sm">
+          <NoteHoloCard note={last} />
+        </div>
+      ) : null}
 
       <section>
-        <h3 className="font-heading text-xl text-ivory">Note history</h3>
+        <h3 className="font-heading text-3xl italic text-ivory">Memo cards</h3>
         <p className="mt-1 text-sm text-ivory/65">Indexed from confirmed service-wallet memos. Solana is the source of truth; SQL keeps this list fast.</p>
-        <div className="mt-3 space-y-3">
+        <div className="mt-5 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {history.map((n) => (
-            <HistoryRow key={n.id} note={n} />
+            <NoteHoloCard key={n.id} note={n} />
           ))}
-          {!history.length ? <p className="text-sm text-ivory/60">No memos on the service wallet yet.</p> : null}
         </div>
+        {!history.length ? <p className="mt-4 text-sm text-ivory/60">No memos on the service wallet yet.</p> : null}
       </section>
     </div>
-  );
-}
-
-function NoteReceipt({ note }: { note: Note }) {
-  const done = note.memoStatus === "confirmed";
-  return (
-    <div className="panel rounded-2xl border-emerald-500/30 p-5">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-300">{done ? "✓ Recorded on Solana" : "Broadcasting…"}</p>
-      <blockquote className="mt-2 text-ivory">«{note.note}»</blockquote>
-      {note.memo ? <RawOnchainMemo memo={note.memo} /> : null}
-      <dl className="mt-3 grid gap-1 font-mono text-[12px] text-ivory/75">
-        <div>Signature · {note.memoTx || "pending"}</div>
-        <div>Time · {new Date(note.createdAt).toLocaleString()}</div>
-        <div>Buy · {mark(note.buyStatus)} {note.usdValue != null ? `$${note.usdValue}` : ""}</div>
-        <div>Burn · {mark(note.burnStatus)} {note.tokenAmount != null ? `${note.tokenAmount} $ORBITX` : ""}</div>
-      </dl>
-      {note.error ? <p className="mt-2 text-sm text-flare">{note.error}</p> : null}
-      <div className="mt-3 flex flex-wrap gap-3 text-sm">
-        {note.memoTx ? <SolscanMemoLinks signature={note.memoTx} wallet={SERVICE_WALLET_PUBLIC} /> : null}
-        {note.buyUrl ? (
-          <a className="text-ember" href={note.buyUrl} target="_blank" rel="noreferrer">
-            Buy TX →
-          </a>
-        ) : null}
-        {note.burnUrl ? (
-          <a className="text-ember" href={note.burnUrl} target="_blank" rel="noreferrer">
-            Burn TX →
-          </a>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function HistoryRow({ note }: { note: Note }) {
-  return (
-    <article className="panel rounded-xl p-4">
-      <p className="text-sm text-ivory">«{note.note}»</p>
-      {note.memo ? <RawOnchainMemo memo={note.memo} /> : null}
-      <p className="mt-1 text-[11px] text-ivory/45">{new Date(note.createdAt).toLocaleString()}</p>
-      <p className="mt-2 text-[12px] uppercase tracking-[0.12em] text-ivory/70">
-        Memo {mark(note.memoStatus)} · Buy {mark(note.buyStatus)} · Burn {mark(note.burnStatus)}
-        {note.usdValue != null ? ` · $${note.usdValue}` : ""}
-        {note.tokenAmount != null ? ` · ${note.tokenAmount} $ORBITX` : ""}
-      </p>
-      <div className="mt-2 flex flex-wrap gap-3 text-[12px]">
-        {note.memoTx ? <SolscanMemoLinks signature={note.memoTx} /> : null}
-        {note.buyUrl ? (
-          <a className="text-ember" href={note.buyUrl} target="_blank" rel="noreferrer">
-            View buy
-          </a>
-        ) : null}
-        {note.burnUrl ? (
-          <a className="text-ember" href={note.burnUrl} target="_blank" rel="noreferrer">
-            View burn
-          </a>
-        ) : null}
-      </div>
-    </article>
   );
 }

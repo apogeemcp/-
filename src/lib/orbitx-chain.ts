@@ -456,10 +456,10 @@ async function getParsedTx(conn: Connection, signature: string): Promise<ParsedT
 export async function fetchServiceRawTxs(limit = 48): Promise<{ txs: RawServiceTx[]; requested: number; fetched: number }> {
   const conn = connection();
   const owner = servicePublicAddress();
-  const sigs = await conn.getSignaturesForAddress(new PublicKey(owner), { limit: Math.min(80, Math.max(8, limit)) });
+  const sigs = await conn.getSignaturesForAddress(new PublicKey(owner), { limit: Math.min(1000, Math.max(8, limit)) });
   const out: RawServiceTx[] = [];
   let fetched = 0;
-  const chunk = 4;
+  const chunk = 8;
   for (let i = 0; i < sigs.length; i += chunk) {
     const part = sigs.slice(i, i + chunk);
     const txs = await Promise.all(part.map((s) => getParsedTx(conn, s.signature)));

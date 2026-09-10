@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { SEAL_NOTE_MAX, SERVICE_WALLET_PUBLIC } from "@/lib/onchain-config";
+import { SEAL_EDITION_CAP, SEAL_NOTE_MAX } from "@/lib/onchain-config";
 import { readResponseJson } from "@/lib/read-json";
 import { useWallet } from "./WalletProvider";
-import { SolscanMemoLinks } from "./SolscanMemoLinks";
+import { SealHoloCard, type SealCardData } from "./HoloCard";
 
 type TokenCard = {
   id: string;
@@ -15,27 +15,6 @@ type TokenCard = {
   priceUsd: number | null;
 };
 
-type Seal = {
-  id: string;
-  note: string;
-  tokenMint: string;
-  tokenSymbol: string;
-  imageUrl: string;
-  nftMint: string;
-  memoTx: string | null;
-  buyTx: string | null;
-  burnTx: string | null;
-  memoUrl: string | null;
-  buyUrl: string | null;
-  burnUrl: string | null;
-  tokenAmount: number | null;
-  usdValue: number | null;
-  createdAt: string;
-  error: string | null;
-  buyStatus: string;
-  burnStatus: string;
-};
-
 type Info = {
   wallet?: string;
   ready?: boolean;
@@ -43,8 +22,12 @@ type Info = {
   autoBurnEnabled?: boolean;
   sol?: number | null;
   sealBurnUsd?: number;
+  editionCap?: number;
+  minted?: number;
+  remaining?: number;
+  soldOut?: boolean;
   tokens?: TokenCard[];
-  items?: Seal[];
+  items?: SealCardData[];
 };
 
 async function fileToImagePayload(file: File): Promise<{ imageBase64: string; imageMime: string }> {
@@ -78,14 +61,18 @@ export function OnchainSealComposer() {
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [last, setLast] = useState<Seal | null>(null);
+  const [last, setLast] = useState<SealCardData | null>(null);
 
   const remaining = SEAL_NOTE_MAX - text.length;
   const tokens = info?.tokens || [];
+  const cap = info?.editionCap ?? SEAL_EDITION_CAP;
+  const minted = info?.minted ?? 0;
+  const left = info?.remaining ?? Math.max(0, cap - minted);
+  const soldOut = Boolean(info?.soldOut);
 
   async function refresh() {
     try {
-      const json = await fetch("/api/onchain/seals?limit=20").then((r) => readResponseJson<Info>(r));
+      const json = await fetch(`/api/onchain/seals?limit=${SEAL_EDITION_CAP}`).then((r) => readResponseJson<Info>(r));
       setInfo(json);
       setTokenMint((prev) => prev || json.tokens?.[0]?.mint || "");
     } catch {
@@ -110,13 +97,13 @@ export function OnchainSealComposer() {
   }, [file]);
 
   const canWrite = useMemo(
-    () => Boolean(tokenMint && text.trim() && file && remaining >= 0 && !busy),
-    [tokenMint, text, file, remaining, busy],
+    () => Boolean(!soldOut && tokenMint && text.trim() && file && remaining >= 0 && !busy),
+    [soldOut, tokenMint, text, file, remaining, busy],
   );
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file) return;
+    if (!file || soldOut) return;
     setBusy(true);
     setError(null);
     try {
@@ -131,7 +118,7 @@ export function OnchainSealComposer() {
           wallet: verified ? address : undefined,
         }),
       });
-      const json = await readResponseJson<{ error?: string; seal?: Seal }>(res);
+      const json = await readResponseJson<{ error?: string; seal?: SealCardData }>(res);
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       if (!json.seal) throw new Error("Seal was sent but the receipt was empty.");
       setLast(json.seal);
@@ -146,118 +133,111 @@ export function OnchainSealComposer() {
   }
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={submit} className="panel rounded-2xl p-5">
-        <p className="kicker">Pick a token, write a memo, mint the image</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {tokens.map((token) => {
-            const active = token.mint === tokenMint;
-            return (
-              <button
-                key={token.mint}
-                type="button"
-                onClick={() => setTokenMint(token.mint)}
-                className={`rounded-2xl border px-4 py-3 text-left ${active ? "border-ember bg-ember/10" : "border-white/10"}`}
-              >
-                <p className="font-heading text-lg text-ivory">{token.symbol}</p>
-                <p className="text-[12px] text-ivory/60">{token.name}</p>
-                <p className="mt-2 font-mono text-[11px] text-ivory/45">{token.mint.slice(0, 4)}…{token.mint.slice(-4)}</p>
-                <p className="mt-1 text-[12px] text-ivory/70">
-                  Burn ${token.burnUsd.toFixed(2)}
-                  {token.priceUsd != null ? ` · $${Number(token.priceUsd).toPrecision(4)}` : ""}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-        <label htmlFor="seal-note" className="kicker mt-6 block">
-          Permanent memo
-        </label>
-        <textarea
-          id="seal-note"
-          value={text}
-          onChange={(e) => setText(e.target.value.slice(0, SEAL_NOTE_MAX))}
-          rows={4}
-          placeholder="This text and image are public forever. Do not include secrets."
-          className="field mt-3 w-full rounded-xl"
-        />
-        <div className="mt-3">
-          <label className="kicker" htmlFor="seal-image">
-            Image to mint
-          </label>
-          <input
-            id="seal-image"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="mt-2 block w-full text-sm text-ivory/70"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-          {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="" className="mt-3 max-h-48 rounded-xl border border-white/10 object-contain" />
-          ) : null}
-        </div>
-        <p className="mt-3 text-[12px] text-ivory/55">
-          {remaining} characters left. Each seal buys and burns up to ${info?.sealBurnUsd ?? 0.25} of the selected
-          token, funded by the Apogee service wallet. The image is uploaded to Irys/Arweave and minted as a 1/1.
-          {info && !info.ready ? " Service wallet key is not configured on this host — seals will not sign." : ""}
+    <div className="space-y-8">
+      <div className="panel relative overflow-hidden rounded-2xl px-5 py-4">
+        <span className="saturn-orbit right-[-10%] top-[-80%] h-40 w-40 opacity-40" />
+        <p className="kicker">Limited edition</p>
+        <p className="mt-2 font-display text-3xl tracking-[0.12em] text-ivory">
+          {String(minted).padStart(2, "0")} / {String(cap).padStart(2, "0")}
         </p>
-        <button type="submit" className="btn-primary mt-4" disabled={!canWrite || info?.notesEnabled === false}>
-          {busy ? "Writing on-chain…" : "Mint memo + burn"}
-        </button>
-        {error ? <p className="mt-3 text-sm text-flare">{error}</p> : null}
-      </form>
+        <p className="mt-1 text-sm text-ivory/70">
+          {soldOut
+            ? "The Saturn set is closed. No more seals will be minted."
+            : `${left} card${left === 1 ? "" : "s"} remain. Each mint is one collector slot.`}
+        </p>
+      </div>
 
-      {last ? <SealReceipt seal={last} /> : null}
+      {soldOut ? (
+        <p className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-gold-bright">
+          Edition complete. Browse the {cap} cards below — new writes are rejected on the website and MCP.
+        </p>
+      ) : (
+        <form onSubmit={submit} className="panel rounded-2xl p-5">
+          <p className="kicker">Pick a token, write a memo, mint the card</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {tokens.map((token) => {
+              const active = token.mint === tokenMint;
+              return (
+                <button
+                  key={token.mint}
+                  type="button"
+                  onClick={() => setTokenMint(token.mint)}
+                  className={`rounded-2xl border px-4 py-3 text-left ${active ? "border-gold bg-gold/10" : "border-white/10"}`}
+                >
+                  <p className="font-heading text-lg text-ivory">{token.symbol}</p>
+                  <p className="text-[12px] text-ivory/60">{token.name}</p>
+                  <p className="mt-2 font-mono text-[11px] text-ivory/45">
+                    {token.mint.slice(0, 4)}…{token.mint.slice(-4)}
+                  </p>
+                  <p className="mt-1 text-[12px] text-ivory/70">
+                    Burn ${token.burnUsd.toFixed(2)}
+                    {token.priceUsd != null ? ` · $${Number(token.priceUsd).toPrecision(4)}` : ""}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          <label htmlFor="seal-note" className="kicker mt-6 block">
+            Permanent memo
+          </label>
+          <textarea
+            id="seal-note"
+            value={text}
+            onChange={(e) => setText(e.target.value.slice(0, SEAL_NOTE_MAX))}
+            rows={4}
+            placeholder="This text and image are public forever. Do not include secrets."
+            className="field mt-3 w-full rounded-xl"
+          />
+          <div className="mt-3">
+            <label className="kicker" htmlFor="seal-image">
+              Image on the card
+            </label>
+            <input
+              id="seal-image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="mt-2 block w-full text-sm text-ivory/70"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="" className="mt-3 max-h-48 rounded-xl border border-gold/20 object-contain" />
+            ) : null}
+          </div>
+          <p className="mt-3 text-[12px] text-ivory/55">
+            {remaining} characters left. Next card would be #
+            {String(minted + 1).padStart(3, "0")}/{String(cap).padStart(3, "0")}. Burns up to $
+            {info?.sealBurnUsd ?? 0.25} of the selected token. Image goes to Irys/Arweave as a 1/1.
+            {info && !info.ready ? " Service wallet key is not configured on this host — seals will not sign." : ""}
+          </p>
+          <button type="submit" className="btn-primary mt-4" disabled={!canWrite || info?.notesEnabled === false}>
+            {busy ? "Pressing the card…" : "Mint Saturn card"}
+          </button>
+          {error ? <p className="mt-3 text-sm text-flare">{error}</p> : null}
+        </form>
+      )}
+
+      {last ? (
+        <section>
+          <p className="kicker">Your new card</p>
+          <div className="mt-4 max-w-sm">
+            <SealHoloCard seal={last} />
+          </div>
+        </section>
+      ) : null}
 
       <section>
-        <h3 className="font-heading text-xl text-ivory">Seal history</h3>
-        <p className="mt-1 text-sm text-ivory/65">Confirmed service-wallet seals. Image, memo, buy, and burn stay on-chain.</p>
-        <div className="mt-3 space-y-3">
+        <h3 className="font-heading text-3xl italic text-ivory">The set</h3>
+        <p className="mt-1 text-sm text-ivory/65">
+          Numbered oldest to newest. Image, memo, buy, and burn stay on-chain. {minted} of {cap} pressed.
+        </p>
+        <div className="mt-5 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {(info?.items || []).map((s) => (
-            <SealReceipt key={s.id} seal={s} compact />
+            <SealHoloCard key={s.id} seal={s} />
           ))}
-          {!info?.items?.length ? <p className="text-sm text-ivory/60">No token seals yet.</p> : null}
         </div>
+        {!info?.items?.length ? <p className="mt-4 text-sm text-ivory/60">No Saturn cards yet. The first 50 people to mint close the set.</p> : null}
       </section>
     </div>
-  );
-}
-
-function SealReceipt({ seal, compact }: { seal: Seal; compact?: boolean }) {
-  return (
-    <article className={`panel rounded-2xl p-4 ${compact ? "" : "border-emerald-500/30"}`}>
-      <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-300">{seal.tokenSymbol} seal</p>
-      <blockquote className="mt-2 text-ivory">«{seal.note}»</blockquote>
-      {seal.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={seal.imageUrl} alt="" className="mt-3 max-h-56 rounded-xl border border-white/10 object-contain" />
-      ) : null}
-      <p className="mt-2 font-mono text-[11px] text-ivory/50">{seal.tokenMint}</p>
-      {seal.nftMint ? <p className="font-mono text-[11px] text-ivory/50">NFT {seal.nftMint}</p> : null}
-      <p className="mt-2 text-[12px] text-ivory/70">
-        Buy {seal.buyStatus} · Burn {seal.burnStatus}
-        {seal.usdValue != null ? ` · $${seal.usdValue}` : ""}
-      </p>
-      {seal.error ? <p className="mt-2 text-sm text-flare">{seal.error}</p> : null}
-      <div className="mt-2 flex flex-wrap gap-3 text-[12px]">
-        {seal.memoTx ? <SolscanMemoLinks signature={seal.memoTx} wallet={SERVICE_WALLET_PUBLIC} /> : null}
-        {seal.buyUrl ? (
-          <a className="text-ember" href={seal.buyUrl} target="_blank" rel="noreferrer">
-            Buy TX →
-          </a>
-        ) : null}
-        {seal.burnUrl ? (
-          <a className="text-ember" href={seal.burnUrl} target="_blank" rel="noreferrer">
-            Burn TX →
-          </a>
-        ) : null}
-        {seal.imageUrl ? (
-          <a className="text-ember" href={seal.imageUrl} target="_blank" rel="noreferrer">
-            Image →
-          </a>
-        ) : null}
-      </div>
-    </article>
   );
 }

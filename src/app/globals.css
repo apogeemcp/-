@@ -403,6 +403,90 @@ summary:focus-visible {
   animation: ring-breathe 14s ease-in-out infinite;
 }
 
+@keyframes card-float {
+  0%,
+  100% {
+    transform: translateY(0) rotateX(2deg) rotateY(-4deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateX(-2deg) rotateY(4deg);
+  }
+}
+
+@keyframes holo-shift {
+  0% {
+    background-position: 0% 40%;
+  }
+  100% {
+    background-position: 120% 60%;
+  }
+}
+
+@keyframes welcome-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.holo-card {
+  perspective: 1200px;
+}
+
+.holo-card-face {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transform-style: preserve-3d;
+  animation: card-float 7s ease-in-out infinite;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(240, 215, 140, 0.22), transparent 42%),
+    linear-gradient(165deg, #2a2010 0%, #0c0a0e 38%, #1a0c08 100%);
+  border: 1px solid rgba(240, 215, 140, 0.55);
+  box-shadow:
+    inset 0 0 0 3px rgba(18, 12, 8, 0.95),
+    inset 0 0 0 5px rgba(212, 175, 55, 0.55),
+    0 24px 50px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(212, 175, 55, 0.12);
+}
+
+.holo-card-face::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  mix-blend-mode: color-dodge;
+  opacity: 0.42;
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    rgba(255, 80, 180, 0.35) 35%,
+    rgba(80, 220, 255, 0.4) 48%,
+    rgba(255, 220, 80, 0.45) 62%,
+    transparent 78%
+  );
+  background-size: 220% 220%;
+  animation: holo-shift 5.5s linear infinite;
+}
+
+.holo-card:hover .holo-card-face {
+  transform: rotateY(8deg) rotateX(-6deg) scale(1.03);
+  box-shadow:
+    inset 0 0 0 3px rgba(18, 12, 8, 0.95),
+    inset 0 0 0 5px rgba(240, 215, 140, 0.8),
+    0 28px 60px rgba(0, 0, 0, 0.6),
+    0 0 50px rgba(212, 175, 55, 0.22);
+}
+
+.welcome-overlay {
+  animation: welcome-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
