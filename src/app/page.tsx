@@ -13,7 +13,7 @@ export default function HomePage() {
         <SaturnBackdrop variant="hero" className="absolute inset-0" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#05040a] via-[#05040a]/72 to-transparent" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05040a] via-transparent to-[#05040a]/40" />
-        <span className="orbit-ring live left-[-10%] top-[-20%] h-[120%] w-[70%] opacity-40" />
+        <span className="orbit-ring left-[-10%] top-[-20%] h-[120%] w-[70%] opacity-30" />
         <div className="relative mx-auto flex min-h-[min(88vh,820px)] max-w-6xl flex-col justify-end px-5 pb-14 pt-16 sm:px-6">
           <p className="kicker">
             Chain {CHAIN.id} · {PRODUCT.toolCount} operations · auth none · v{PRODUCT.version}

@@ -24,7 +24,7 @@ export function BannerArt({ focus = "page" }: { focus?: keyof typeof FOCI }) {
       />
       <div className={`absolute inset-0 bg-gradient-to-r ${f.wash}`} />
       <div className="absolute inset-0 bg-gradient-to-t from-[#05040a] via-[#05040a]/30 to-transparent" />
-      <span className="orbit-ring live left-[36%] top-[-34%] h-[150%] w-[85%] opacity-55" />
+      <span className="orbit-ring left-[36%] top-[-34%] h-[150%] w-[85%] opacity-40" />
       <span className="absolute right-[8%] top-[-20%] h-[22rem] w-[22rem]">
         <span className="saturn-orbit inset-0 opacity-50" />
       </span>

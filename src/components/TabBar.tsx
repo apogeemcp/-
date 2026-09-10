@@ -52,7 +52,7 @@ export function TabBar({ tabs }: { tabs: readonly { href: string; label: string;
 
   return (
     <>
-      <nav className="hidden border-b border-gold/10 bg-[#06050a]/92 backdrop-blur-2xl md:block" aria-label="Primary">
+      <nav className="hidden border-b border-gold/10 bg-[#06050a]/94 backdrop-blur-md md:block" aria-label="Primary">
         <div className="relative mx-auto grid max-w-6xl grid-cols-5 px-2">
           <span className="tab-indicator" style={{ transform: `translateX(${index * 100}%)` }} />
           {tabs.map((t) => {
@@ -62,7 +62,7 @@ export function TabBar({ tabs }: { tabs: readonly { href: string; label: string;
                 key={t.href}
                 href={t.href}
                 aria-current={on ? "page" : undefined}
-                className={`relative flex min-h-12 items-center justify-center gap-2 text-[12px] uppercase tracking-[0.18em] transition ${
+                className={`relative flex min-h-12 items-center justify-center gap-2 text-[12px] uppercase tracking-[0.18em] transition-colors duration-300 ${
                   on ? "text-gold-bright" : "text-ivory/40 hover:text-ivory/80"
                 }`}
               >
@@ -75,7 +75,7 @@ export function TabBar({ tabs }: { tabs: readonly { href: string; label: string;
       </nav>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/15 bg-[#06050a]/96 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/15 bg-[#06050a]/96 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
         aria-label="Primary"
       >
         <div className="grid grid-cols-5 px-1">

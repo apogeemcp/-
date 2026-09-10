@@ -33,7 +33,7 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-50">
       <div className="h-px bg-gradient-to-r from-transparent via-gold to-ember/80" />
-      <div className="border-b border-gold/15 bg-[#06050a]/78 backdrop-blur-2xl">
+      <div className="border-b border-gold/15 bg-[#06050a]/88 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6 pt-[env(safe-area-inset-top)]">
           <BrandMark size={36} />
           <div className="flex min-w-0 items-center gap-2">
@@ -63,7 +63,7 @@ export function Nav() {
               {open ? (
                 <div
                   role="menu"
-                  className="glass-3 absolute right-0 top-12 z-50 max-h-[min(70vh,28rem)] w-56 origin-top-right overflow-y-auto py-1 page-enter"
+                  className="glass-3 absolute right-0 top-12 z-50 max-h-[min(70vh,28rem)] w-56 origin-top-right overflow-y-auto py-1"
                 >
                   {MORE_LINKS.map((l) => (
                     <Link

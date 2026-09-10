@@ -8,7 +8,7 @@ import { CHAIN } from "@/lib/chain";
 const KEY = "apogee-welcome-saturn-v1";
 
 export function WelcomeGate() {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState<boolean | null>(null);
   const enter = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export function WelcomeGate() {
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-[#05040a]/88 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="welcome-title"

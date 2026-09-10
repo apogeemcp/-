@@ -64,7 +64,7 @@ export function SealHoloCard({ seal }: { seal: SealCardData }) {
           <span>{serial(seal.edition, seal.editionCap)}</span>
         </div>
         <div className="relative z-[5] mt-2 overflow-hidden rounded-[0.9rem] border border-gold/30 bg-black/50">
-          <span className="saturn-orbit inset-[-20%] opacity-40" />
+          <span className="saturn-orbit still inset-[-20%] opacity-40" />
           {seal.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={seal.imageUrl} alt="" className="relative z-[1] aspect-[4/3] w-full object-cover" />
@@ -149,7 +149,7 @@ export function NoteHoloCard({ note }: { note: NoteCardData }) {
           <span>{foil(note.memoStatus)}</span>
         </div>
         <div className="relative z-[5] mt-2 flex aspect-[16/9] items-center justify-center overflow-hidden rounded-[0.9rem] border border-gold/30 bg-black/50">
-          <span className="saturn-orbit inset-[-30%] opacity-50" />
+          <span className="saturn-orbit still inset-[-30%] opacity-50" />
           <p className="relative z-[1] font-display text-3xl tracking-[0.2em] text-gold">NOTE</p>
         </div>
         <div className="relative z-[5] mt-3 px-1">

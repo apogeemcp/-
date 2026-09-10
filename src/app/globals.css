@@ -25,6 +25,7 @@ body {
   color: #f6f1e4;
   min-height: 100%;
   min-height: 100dvh;
+  overflow-x: hidden;
 }
 
 body {
@@ -42,17 +43,7 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-body::before {
-  content: "";
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  opacity: 0.07;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.55'/></svg>");
-  animation: grain 0.55s steps(4) infinite;
-}
+/* Grain stays behind content — never animated, never blended on top of type. */
 
 * {
   scrollbar-width: thin;
@@ -68,7 +59,7 @@ body::before {
   .glass-1 {
     background: rgba(8, 7, 12, 0.48);
     border: 1px solid rgba(240, 215, 140, 0.1);
-    backdrop-filter: blur(18px);
+    backdrop-filter: blur(10px);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
   }
 
@@ -77,18 +68,18 @@ body::before {
   .glass {
     background: linear-gradient(180deg, rgba(24, 18, 16, 0.78), rgba(7, 6, 10, 0.88));
     border: 1px solid rgba(240, 215, 140, 0.14);
-    backdrop-filter: blur(22px);
+    backdrop-filter: blur(12px);
     box-shadow:
       inset 0 1px 0 rgba(255, 244, 214, 0.12),
       0 18px 40px rgba(0, 0, 0, 0.38);
     border-radius: var(--r-md);
-    transition: border-color 0.28s ease, transform 0.28s ease, box-shadow 0.28s ease;
+    transition: border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .glass-3 {
     background: linear-gradient(180deg, rgba(32, 22, 16, 0.94), rgba(8, 7, 10, 0.97));
     border: 1px solid rgba(240, 215, 140, 0.2);
-    backdrop-filter: blur(28px);
+    backdrop-filter: blur(14px);
     box-shadow:
       inset 0 1px 0 rgba(255, 244, 214, 0.16),
       0 28px 64px rgba(0, 0, 0, 0.5);
@@ -98,7 +89,7 @@ body::before {
   .glass-4 {
     background: linear-gradient(180deg, rgba(155, 28, 46, 0.28), rgba(8, 7, 8, 0.9));
     border: 1px solid rgba(232, 93, 4, 0.35);
-    backdrop-filter: blur(24px);
+    backdrop-filter: blur(12px);
     box-shadow: 0 0 32px rgba(155, 28, 46, 0.22);
     border-radius: var(--r-md);
   }
@@ -155,7 +146,8 @@ body::before {
   .btn-primary,
   .btn-ghost,
   .btn-ember {
-    @apply relative inline-flex min-h-11 items-center justify-center gap-2 overflow-hidden px-5 py-2.5 text-[11px] font-medium uppercase tracking-[0.18em] transition;
+    @apply relative inline-flex min-h-11 items-center justify-center gap-2 overflow-hidden px-5 py-2.5 text-[11px] font-medium uppercase tracking-[0.18em];
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s ease, color 0.35s ease;
     border-radius: var(--r-pill);
   }
 
@@ -265,12 +257,17 @@ body::before {
     0 0 40px rgba(212, 175, 55, 0.08),
     inset 0 0 24px rgba(240, 215, 140, 0.08);
   transform: rotate(-18deg) scaleX(1.85) scaleY(0.52);
-  animation: saturn-ring-spin 48s linear infinite;
+  will-change: transform;
+  animation: saturn-ring-spin 90s linear infinite;
 }
 
 .saturn-orbit.slow {
-  animation-duration: 72s;
+  animation-duration: 140s;
   animation-direction: reverse;
+}
+
+.saturn-orbit.still {
+  animation: none;
 }
 
 .brand-orbit {
@@ -280,7 +277,7 @@ body::before {
   border: 1px solid rgba(212, 175, 55, 0.28);
   border-top-color: #f0d78c;
   border-right-color: rgba(232, 93, 4, 0.45);
-  animation: saturn-spin 9s linear infinite;
+  animation: saturn-spin 16s linear infinite;
 }
 
 .tab-indicator {
@@ -292,15 +289,17 @@ body::before {
   pointer-events: none;
   background: linear-gradient(90deg, transparent, #d4af37, #f0d78c, #d4af37, transparent);
   box-shadow: 0 0 18px rgba(212, 175, 55, 0.7);
-  transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
 
 .tab-glow {
   box-shadow: 0 0 22px rgba(212, 175, 55, 0.28);
 }
 
-.page-enter {
-  animation: page-enter 0.62s cubic-bezier(0.22, 1, 0.36, 1);
+.saturn-canvas {
+  transform: translateZ(0);
+  contain: paint;
 }
 
 .ring-spinner {
@@ -360,65 +359,12 @@ summary:focus-visible {
   }
 }
 
-@keyframes grain {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  25% {
-    transform: translate(-2%, 1%);
-  }
-  50% {
-    transform: translate(1%, -1%);
-  }
-  75% {
-    transform: translate(-1%, 2%);
-  }
-}
-
-@keyframes page-enter {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes ring-breathe {
-  0%,
-  100% {
-    opacity: 0.35;
-    transform: rotate(-18deg) scaleX(1.62);
-  }
-  50% {
-    opacity: 0.7;
-    transform: rotate(-14deg) scaleX(1.7);
-  }
-}
-
-.orbit-ring.live {
-  animation: ring-breathe 14s ease-in-out infinite;
-}
-
-@keyframes card-float {
-  0%,
-  100% {
-    transform: translateY(0) rotateX(2deg) rotateY(-4deg);
-  }
-  50% {
-    transform: translateY(-8px) rotateX(-2deg) rotateY(4deg);
-  }
-}
-
 @keyframes holo-shift {
   0% {
-    background-position: 0% 40%;
+    background-position: 0% 50%;
   }
   100% {
-    background-position: 120% 60%;
+    background-position: 100% 50%;
   }
 }
 
@@ -434,15 +380,12 @@ summary:focus-visible {
 }
 
 .holo-card {
-  perspective: 1200px;
+  transform: translateZ(0);
 }
 
 .holo-card-face {
   position: relative;
   overflow: hidden;
-  isolation: isolate;
-  transform-style: preserve-3d;
-  animation: card-float 7s ease-in-out infinite;
   background:
     radial-gradient(ellipse at 20% 10%, rgba(240, 215, 140, 0.22), transparent 42%),
     linear-gradient(165deg, #2a2010 0%, #0c0a0e 38%, #1a0c08 100%);
@@ -450,8 +393,8 @@ summary:focus-visible {
   box-shadow:
     inset 0 0 0 3px rgba(18, 12, 8, 0.95),
     inset 0 0 0 5px rgba(212, 175, 55, 0.55),
-    0 24px 50px rgba(0, 0, 0, 0.55),
-    0 0 40px rgba(212, 175, 55, 0.12);
+    0 24px 50px rgba(0, 0, 0, 0.55);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .holo-card-face::before {
@@ -460,27 +403,28 @@ summary:focus-visible {
   position: absolute;
   inset: 0;
   z-index: 4;
-  mix-blend-mode: color-dodge;
-  opacity: 0.42;
+  opacity: 0.18;
   background: linear-gradient(
     115deg,
-    transparent 20%,
-    rgba(255, 80, 180, 0.35) 35%,
-    rgba(80, 220, 255, 0.4) 48%,
-    rgba(255, 220, 80, 0.45) 62%,
-    transparent 78%
+    transparent 28%,
+    rgba(255, 220, 80, 0.28) 50%,
+    transparent 72%
   );
-  background-size: 220% 220%;
-  animation: holo-shift 5.5s linear infinite;
+  background-size: 220% 100%;
+  transition: opacity 0.45s ease;
 }
 
 .holo-card:hover .holo-card-face {
-  transform: rotateY(8deg) rotateX(-6deg) scale(1.03);
+  transform: translateY(-4px);
   box-shadow:
     inset 0 0 0 3px rgba(18, 12, 8, 0.95),
     inset 0 0 0 5px rgba(240, 215, 140, 0.8),
-    0 28px 60px rgba(0, 0, 0, 0.6),
-    0 0 50px rgba(212, 175, 55, 0.22);
+    0 28px 48px rgba(0, 0, 0, 0.5);
+}
+
+.holo-card:hover .holo-card-face::before {
+  opacity: 0.38;
+  animation: holo-shift 2.8s linear infinite;
 }
 
 .welcome-overlay {
@@ -497,7 +441,9 @@ summary:focus-visible {
     scroll-behavior: auto !important;
   }
 
-  body::before {
-    animation: none;
+  .saturn-orbit,
+  .brand-orbit,
+  .holo-card-face::before {
+    animation: none !important;
   }
 }
