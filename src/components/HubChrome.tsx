@@ -23,7 +23,7 @@ export function HubChrome() {
   if (!pathname.startsWith("/developers")) return null;
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-ivory/70">
+    <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-gold/15 bg-black/30 px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-ivory/70">
       <span className="text-emerald-300">MCP public</span>
       <span className="text-ivory/30">·</span>
       <span>{role || "no role"}</span>

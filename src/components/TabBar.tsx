@@ -20,7 +20,7 @@ const ICONS: Record<string, (active: boolean) => ReactNode> = {
   ),
   "/launches": (a) => (
     <svg viewBox="0 0 24 24" className={ico(a)} fill="none" stroke="currentColor" strokeWidth="1.7">
-      <path d="M12 3c4 3.2 6.2 7.4 6.2 11.2A6.2 6.2 0 0 1 12 20.4 6.2 6.2 0 0 1 5.8 14.2C5.8 10.4 8 6.2 12 3Z" />
+      <path d="M12 3c4 3.2 6.2 7.4 6.2 11.2A6.2 6.2 0 1 1 12 20.4 6.2 6.2 0 0 1 5.8 14.2C5.8 10.4 8 6.2 12 3Z" />
       <path d="M12 14.2V8.4" />
     </svg>
   ),
@@ -39,17 +39,22 @@ const ICONS: Record<string, (active: boolean) => ReactNode> = {
 };
 
 function ico(active: boolean) {
-  return `h-5 w-5 ${active ? "text-gold" : "text-ivory/50"}`;
+  return `h-5 w-5 ${active ? "text-gold-bright" : "text-ivory/45"}`;
 }
 
 export function TabBar({ tabs }: { tabs: readonly { href: string; label: string; hint?: string }[] }) {
   const path = usePathname();
   const active = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
+  const index = Math.max(
+    0,
+    tabs.findIndex((t) => active(t.href)),
+  );
 
   return (
     <>
-      <nav className="hidden border-b border-white/[0.06] bg-[#080706]/92 backdrop-blur-xl md:block" aria-label="Primary">
-        <div className="mx-auto grid max-w-6xl grid-cols-5 px-2">
+      <nav className="hidden border-b border-gold/10 bg-[#06050a]/92 backdrop-blur-2xl md:block" aria-label="Primary">
+        <div className="relative mx-auto grid max-w-6xl grid-cols-5 px-2">
+          <span className="tab-indicator" style={{ transform: `translateX(${index * 100}%)` }} />
           {tabs.map((t) => {
             const on = active(t.href);
             return (
@@ -57,13 +62,12 @@ export function TabBar({ tabs }: { tabs: readonly { href: string; label: string;
                 key={t.href}
                 href={t.href}
                 aria-current={on ? "page" : undefined}
-                className={`relative flex h-12 items-center justify-center gap-2 text-[13px] tracking-[0.04em] transition ${
-                  on ? "text-ivory" : "text-ivory/45 hover:text-ivory/80"
+                className={`relative flex min-h-12 items-center justify-center gap-2 text-[12px] uppercase tracking-[0.18em] transition ${
+                  on ? "text-gold-bright" : "text-ivory/40 hover:text-ivory/80"
                 }`}
               >
                 {ICONS[t.href]?.(on)}
                 <span className="font-medium">{t.label}</span>
-                {on ? <span className="absolute inset-x-8 bottom-0 h-[2px] bg-gold shadow-gold" /> : null}
               </Link>
             );
           })}
@@ -71,10 +75,10 @@ export function TabBar({ tabs }: { tabs: readonly { href: string; label: string;
       </nav>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#080706]/96 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/15 bg-[#06050a]/96 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden"
         aria-label="Primary"
       >
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-5 px-1">
           {tabs.map((t) => {
             const on = active(t.href);
             return (
@@ -82,10 +86,14 @@ export function TabBar({ tabs }: { tabs: readonly { href: string; label: string;
                 key={t.href}
                 href={t.href}
                 aria-current={on ? "page" : undefined}
-                className="flex min-h-11 flex-col items-center justify-center gap-0.5 py-2"
+                className="flex min-h-12 flex-col items-center justify-center gap-0.5 py-2"
               >
-                {ICONS[t.href]?.(on)}
-                <span className={`text-[10px] tracking-[0.12em] ${on ? "text-gold" : "text-ivory/65"}`}>{t.label}</span>
+                <span className={`rounded-full px-3 py-1 transition ${on ? "bg-gold/15 tab-glow" : ""}`}>
+                  {ICONS[t.href]?.(on)}
+                </span>
+                <span className={`text-[9px] uppercase tracking-[0.16em] ${on ? "text-gold-bright" : "text-ivory/55"}`}>
+                  {t.label}
+                </span>
               </Link>
             );
           })}

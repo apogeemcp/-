@@ -3,11 +3,9 @@ import { PageFrame } from "@/components/PageHero";
 export default function Loading() {
   return (
     <PageFrame>
-      <div className="panel h-40 animate-pulse rounded-xl" />
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="panel h-28 animate-pulse rounded-xl" />
-        <div className="panel h-28 animate-pulse rounded-xl" />
-        <div className="panel h-28 animate-pulse rounded-xl" />
+      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-6">
+        <div className="ring-spinner" aria-hidden />
+        <p className="kicker">Ascending</p>
       </div>
     </PageFrame>
   );

@@ -32,23 +32,21 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-50">
-      <div className="border-b border-white/[0.08] bg-[#080706]/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6 pt-[env(safe-area-inset-top)]">
-          <BrandMark size={32} />
+      <div className="h-px bg-gradient-to-r from-transparent via-gold to-ember/80" />
+      <div className="border-b border-gold/15 bg-[#06050a]/78 backdrop-blur-2xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6 pt-[env(safe-area-inset-top)]">
+          <BrandMark size={36} />
           <div className="flex min-w-0 items-center gap-2">
             <Link
               href="/connect"
-              className="hidden min-w-0 max-w-[36vw] truncate rounded-full border border-white/10 bg-black/40 px-3 py-1.5 font-mono text-[11px] text-ember hover:border-ember/40 xl:inline"
+              className="hidden min-w-0 max-w-[36vw] truncate rounded-full border border-gold/25 bg-black/40 px-3 py-1.5 font-mono text-[11px] text-gold hover:border-gold/55 xl:inline"
               title={mcp}
             >
               {mcp.replace("https://", "")}
             </Link>
             <InstallApp compact />
             <SiteSearch />
-            <Link
-              href="/developers"
-              className="hidden rounded-full border border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-ivory/80 hover:text-ivory sm:inline"
-            >
+            <Link href="/developers" className="chrome-pill hidden sm:inline">
               Developers
             </Link>
             <div className="relative" ref={menu}>
@@ -57,7 +55,7 @@ export function Nav() {
                 aria-expanded={open}
                 aria-haspopup="menu"
                 onClick={() => setOpen((v) => !v)}
-                className="rounded-full border border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-ivory/80 hover:text-ivory"
+                className="chrome-pill"
                 aria-label="More navigation links"
               >
                 More
@@ -65,7 +63,7 @@ export function Nav() {
               {open ? (
                 <div
                   role="menu"
-                  className="glass-3 absolute right-0 top-10 z-50 max-h-[min(70vh,28rem)] w-56 overflow-y-auto py-1"
+                  className="glass-3 absolute right-0 top-12 z-50 max-h-[min(70vh,28rem)] w-56 origin-top-right overflow-y-auto py-1 page-enter"
                 >
                   {MORE_LINKS.map((l) => (
                     <Link
@@ -73,7 +71,7 @@ export function Nav() {
                       href={l.href}
                       role="menuitem"
                       onClick={() => setOpen(false)}
-                      className="block px-3 py-2 text-sm text-ivory/75 hover:bg-white/5 hover:text-ivory"
+                      className="block px-3 py-2.5 text-sm tracking-wide text-ivory/75 transition hover:bg-gold/10 hover:text-gold-bright"
                     >
                       {l.label}
                     </Link>

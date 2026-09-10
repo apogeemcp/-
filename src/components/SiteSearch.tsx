@@ -76,7 +76,7 @@ export function SiteSearch() {
     <div className="relative">
       <button
         type="button"
-        className="rounded-full border border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-ivory/80 hover:text-ivory max-[420px]:px-2"
+        className="chrome-pill max-[420px]:px-2"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}
